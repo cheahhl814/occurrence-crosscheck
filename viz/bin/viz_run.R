@@ -22,6 +22,8 @@ option_list <- list(
   make_option("--config", type = "character", help = "Realm run config JSON"),
   make_option("--outdir", type = "character", default = "viz_out", help = "Output directory"),
   make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
+  make_option("--overlay", type = "character", default = NULL,
+              help = "Context occurrences CSV (forwarded to the maps worker)"),
   make_option("--only", type = "character", default = "maps,profiles,report",
               help = "Comma-separated subset of phases to run"),
   make_option("--phase", type = "character", default = NULL,
@@ -91,7 +93,7 @@ ok <- TRUE
 for (ph in phases) {
   script <- switch(ph, maps = "plot_map.R", profiles = "plot_profiles.R", report = "build_report.R",
                    stop(sprintf("unknown phase '%s' (maps | profiles | report)", ph), call. = FALSE))
-  ok <- run_phase(ph, script) && ok
+  ok <- run_phase(ph, script, if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)) && ok
 }
 log_msg(sprintf("viz_run complete (all phases ok: %s). Outputs in %s/fig + %s/figure-report.md", ok, opt$outdir, opt$outdir))
 if (!ok) quit(status = 1)

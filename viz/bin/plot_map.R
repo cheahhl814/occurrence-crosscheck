@@ -20,7 +20,9 @@ option_list <- list(
   make_option("--input", type = "character", help = "Occurrence table (parquet/csv/tsv)"),
   make_option("--config", type = "character", help = "Realm run config JSON"),
   make_option("--outdir", type = "character", default = ".", help = "Output directory"),
-  make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions")
+  make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
+  make_option("--overlay", type = "character", default = NULL,
+              help = "Optional CSV of GBIF/OBIS context records plotted under detections")
 )
 opt <- parse_args(OptionParser(option_list = option_list))
 
@@ -74,9 +76,25 @@ theme_viz <- theme_bw(base_size = 11) +
   theme(panel.grid = element_line(colour = "grey92", linewidth = 0.3),
         strip.text = element_text(face = "italic", size = 8))
 
+dfp_overlay <- NULL
+if (!is.null(opt$overlay) && file.exists(opt$overlay)) {
+  ovl <- read.csv(opt$overlay, stringsAsFactors = FALSE)
+  ovl$decimalLatitude <- as.numeric(ovl$decimalLatitude)
+  ovl$decimalLongitude <- as.numeric(ovl$decimalLongitude)
+  ovl <- ovl[!is.na(ovl$decimalLatitude) & !is.na(ovl$decimalLongitude), , drop = FALSE]
+  if (nrow(ovl) > 0) {
+    message(sprintf("[occurrence-viz] overlay: %d context records from %s", nrow(ovl), basename(opt$overlay)))
+    dfp_overlay <- ovl
+  }
+}
+
 # ---- figure 01: all-species occurrence map (points coloured by species) ----
+
 p_overview <- ggplot() +
   base_layer() +
+  {if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0)
+    geom_point(data = dfp_overlay, aes(x = decimalLongitude, y = decimalLatitude),
+               shape = 21, fill = "#95a5a6", colour = "grey45", size = 0.6, alpha = 0.4, stroke = 0.2) else NULL} +
   geom_point(data = dfp, aes(x = decimalLongitude, y = decimalLatitude,
                              colour = .data[[sp_name]]), size = 0.7, alpha = 0.45) +
   fill_scale +
@@ -84,7 +102,9 @@ p_overview <- ggplot() +
   labs(title = sprintf("Occurrence records%s%s",
                        if (sub$subsampled) sprintf(" (subsampled %s of %s)", format(nrow(dfp), big.mark = ","), format(sub$n_original, big.mark = ",")) else "",
                        if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`)),
-       subtitle = sprintf("%s species · %s points · realm: %s", n_species, format(nrow(dfp), big.mark = ","), cfg$realm),
+       subtitle = sprintf("%s species · %s points%s · realm: %s", n_species, format(nrow(dfp), big.mark = ","),
+                   if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0) sprintf(" · overlay: %s context records (GBIF/OBIS)", format(nrow(dfp_overlay), big.mark = ",")) else "",
+                   cfg$realm),
        x = "Longitude", y = "Latitude", colour = "Species") +
   theme_viz + theme(legend.position = "none")
 
