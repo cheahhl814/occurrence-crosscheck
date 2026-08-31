@@ -206,6 +206,18 @@ def main() -> None:
     # Write enriched.parquet
     if pd is not None:
         df = pd.DataFrame(enriched_rows)
+        # §11.2 numeric-column enforcement: CSV inputs arrive as strings; coordinate,
+        # trait and env columns must land typed or downstream (viz range math, SDMs) breaks
+        NUMERIC_COLS = ["decimalLatitude", "decimalLongitude",
+                        "trait_depth_min_m", "trait_depth_max_m",
+                        "trait_trophic_level", "trait_body_size_cm",
+                        "gbif_taxonKey", "worms_AphiaID", "fishbase_SpeCode"]
+        for col in NUMERIC_COLS:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        env_cols = [c for c in df.columns if c.startswith("env_") and c != "env_layer_class"]
+        for col in env_cols:
+            df[col] = pd.to_numeric(df[col], errors="coerce")
         df.to_parquet(out_dir / "enriched.parquet", index=False)
     else:  # pragma: no cover
         (out_dir / "enriched.json").write_text(json.dumps(enriched_rows))
