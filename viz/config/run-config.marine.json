@@ -1,7 +1,10 @@
 {
   "realm": "marine",
   "description": "Run config template: MARINE realm (PLAN-marine-edna-meta-skill.md Phase 2). Depth profiles + occurrence map. Copy to a run dir and edit; realm-awareness = this config, never code branching.",
-  "output_formats": ["png", "pdf"],
+  "output_formats": [
+    "png",
+    "pdf"
+  ],
   "figures": {
     "occurrence_map": true,
     "depth_profile": true,
@@ -16,15 +19,26 @@
     "max_species": 12
   },
   "profiles": {
-    "x_variables": ["depth_m", "depth", "env_bio_thetao", "env_bio_temp_ss"],
-    "x_label": "Depth / temperature (m, °C)",
+    "x_variables": [
+      "depth_m",
+      "depth",
+      "env_bio_thetao",
+      "env_bio_temp_ss"
+    ],
+    "x_label": "Depth / temperature (m, \u00b0C)",
     "figure_title": "Depth profile",
     "reverse_y": false,
-    "envelope_variables": ["env_bio_thetao", "env_bio_so", "env_bio_temp_ss", "env_bio_salinity_ss", "depth_m"],
+    "envelope_variables": [
+      "env_bio_thetao",
+      "env_bio_so",
+      "env_bio_temp_ss",
+      "env_bio_salinity_ss",
+      "depth_m"
+    ],
     "envelope_label": "env / depth value",
     "trait_space": true
   },
-  "_integration_note": "2026-08-31: env_bio_thetao/so added — these are the actual Bio-ORACLE layer names edna-crosscheck emits (thetao = potential temperature, so = salinity); temp_ss/salinity_ss kept for back-compat. Cross-check the run manifest's env_layers when configuring a real run.",
+  "_integration_note": "2026-08-31: env_bio_thetao/so added \u2014 these are the actual Bio-ORACLE layer names edna-crosscheck emits (thetao = potential temperature, so = salinity); temp_ss/salinity_ss kept for back-compat. Cross-check the run manifest's env_layers when configuring a real run.",
   "qc": {
     "onland_flagged": true
   }

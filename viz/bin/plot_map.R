@@ -49,6 +49,18 @@ sp_name <- "scientificName"
 n_species <- length(unique(na.omit(dfp[[sp_name]])))
 top_n <- if (!is.null(map_cfg$max_species)) map_cfg$max_species else 12
 
+dfp_overlay <- NULL
+if (!is.null(opt$overlay) && file.exists(opt$overlay)) {
+  ovl <- read.csv(opt$overlay, stringsAsFactors = FALSE)
+  ovl$decimalLatitude <- as.numeric(ovl$decimalLatitude)
+  ovl$decimalLongitude <- as.numeric(ovl$decimalLongitude)
+  ovl <- ovl[!is.na(ovl$decimalLatitude) & !is.na(ovl$decimalLongitude), , drop = FALSE]
+  if (nrow(ovl) > 0) {
+    message(sprintf("[occurrence-viz] overlay: %d context records from %s", nrow(ovl), basename(opt$overlay)))
+    dfp_overlay <- ovl
+  }
+}
+
 # ---- extent ----
 bbox_pad <- 0.10
 if (!is.null(map_cfg$bbox)) {
@@ -57,6 +69,12 @@ if (!is.null(map_cfg$bbox)) {
   rx <- range(dfp$decimalLongitude, na.rm = TRUE); ry <- range(dfp$decimalLatitude, na.rm = TRUE)
   pad_x <- max(diff(rx) * bbox_pad, 1); pad_y <- max(diff(ry) * bbox_pad, 1)
   xlim <- c(rx[1] - pad_x, rx[2] + pad_x); ylim <- c(ry[1] - pad_y, ry[2] + pad_y)
+}
+if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0) {
+  xlim <- range(c(xlim, range(dfp_overlay$decimalLongitude, na.rm = TRUE)))
+  ylim <- range(c(ylim, range(dfp_overlay$decimalLatitude, na.rm = TRUE)))
+  # modest padding so edge context records aren't clipped
+  m <- 0.05 * max(diff(xlim), diff(ylim)); xlim <- xlim + c(-m, m); ylim <- ylim + c(-m, m)
 }
 crop_bbox <- sf::st_bbox(c(xmin = xlim[1], ymin = ylim[1], xmax = xlim[2], ymax = ylim[2]), crs = 4326)
 
@@ -76,27 +94,15 @@ theme_viz <- theme_bw(base_size = 11) +
   theme(panel.grid = element_line(colour = "grey92", linewidth = 0.3),
         strip.text = element_text(face = "italic", size = 8))
 
-dfp_overlay <- NULL
-if (!is.null(opt$overlay) && file.exists(opt$overlay)) {
-  ovl <- read.csv(opt$overlay, stringsAsFactors = FALSE)
-  ovl$decimalLatitude <- as.numeric(ovl$decimalLatitude)
-  ovl$decimalLongitude <- as.numeric(ovl$decimalLongitude)
-  ovl <- ovl[!is.na(ovl$decimalLatitude) & !is.na(ovl$decimalLongitude), , drop = FALSE]
-  if (nrow(ovl) > 0) {
-    message(sprintf("[occurrence-viz] overlay: %d context records from %s", nrow(ovl), basename(opt$overlay)))
-    dfp_overlay <- ovl
-  }
-}
-
 # ---- figure 01: all-species occurrence map (points coloured by species) ----
 
 p_overview <- ggplot() +
   base_layer() +
   {if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0)
     geom_point(data = dfp_overlay, aes(x = decimalLongitude, y = decimalLatitude),
-               shape = 21, fill = "#95a5a6", colour = "grey45", size = 0.6, alpha = 0.4, stroke = 0.2) else NULL} +
+               shape = 21, fill = "#7f8c9c", colour = "grey30", size = 1.1, alpha = 0.55, stroke = 0.25) else NULL} +
   geom_point(data = dfp, aes(x = decimalLongitude, y = decimalLatitude,
-                             colour = .data[[sp_name]]), size = 0.7, alpha = 0.45) +
+                             colour = .data[[sp_name]]), size = 1.6, alpha = 0.85) +
   fill_scale +
   coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
   labs(title = sprintf("Occurrence records%s%s",
