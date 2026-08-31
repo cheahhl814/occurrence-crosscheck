@@ -14,7 +14,14 @@ INPUT_CSV="${1:?input.csv required}"
 REALM="${2:?realm required (marine|freshwater|terrestrial)}"
 MARKER="${3:?marker required}"
 OUT_DIR="${4:?out_dir required}"
-WORK_DIR="${5:-$OUT_DIR/work}"
+WORK_DIR="${OUT_DIR}/work"
+
+shift 4
+# Optional buffer-zone declaration (preflight phase, PLAN §4): pass through any of
+#   --bbox MINLON MINLAT MAXLON MAXLAT | --buffer-km N | --buffer-deg D
+# (first arg after out_dir may still be the legacy work_dir positional)
+if [ $# -gt 0 ] && [[ "$1" != --* ]]; then WORK_DIR="$1"; shift; fi
+BUFFER_ARGS=("$@")
 
 mkdir -p "$OUT_DIR" "$WORK_DIR"
 PARAMS_JSON="$OUT_DIR/params.json"
@@ -22,9 +29,10 @@ ROUTING_JSON="$WORK_DIR/routing.json"
 NAMES_FILE="$WORK_DIR/names.txt"
 
 echo "== preflight =="
-python3 "$SKILL_DIR/preflight/preflight.py" "$INPUT_CSV" "$REALM" "$MARKER" "$PARAMS_JSON" ${CROSSCHECK_BUFFER:-}
-# ^ user-defined buffer zone: export CROSSCHECK_BUFFER="minLon minLat maxLon maxLat"
-#   to bypass the auto-derived extent (which pads the input extent by 0.25 deg)
+python3 "$SKILL_DIR/preflight/preflight.py" "$INPUT_CSV" "$REALM" "$MARKER" "$PARAMS_JSON" \
+    ${BUFFER_ARGS[@]+"${BUFFER_ARGS[@]}"}
+# ^ buffer zone is declared at preflight: --buffer-km N (pad extent by N km, lon-corrected
+#   at mean latitude) | --bbox MINLON MINLAT MAXLON MAXLAT (explicit) | default 0.25-deg pad.
 
 echo "== realm-router =="
 python3 "$SKILL_DIR/realm-router/realm_router.py" "$PARAMS_JSON" "$ROUTING_JSON"
