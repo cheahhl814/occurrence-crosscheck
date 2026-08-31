@@ -93,6 +93,14 @@ def main() -> None:
         pad = 0.25
         bbox = [extent[0] - pad, extent[1] - pad, extent[2] + pad, extent[3] + pad]
         buffer = {"mode": "auto", "km": None, "pad_deg": pad}
+        extent_span = max(extent[2] - extent[0], extent[3] - extent[1])
+        if extent_span < 0.05:  # degenerate extent: single site / near-identical points
+            print("preflight: WARNING auto buffer (0.25 deg) on a degenerate input extent "
+                  f"(span {extent_span:.4f} deg) — a single-site eDNA survey should declare a "
+                  "regional-scale buffer, e.g. --buffer-km 50..2000. A tight buffer makes every "
+                  "species look discordant when occurrence databases are locally sparse "
+                  "(battle-tested 2026-08-31 on 2024K1: 39/48 false discordance at 0.25 deg, "
+                  "resolved at regional scale).", file=sys.stderr)
 
     params = {
         "skill_run": "edna-crosscheck",
