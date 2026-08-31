@@ -1,0 +1,29 @@
+[workspace]
+name = "occurrence-publish"
+version = "1.0.0"
+description = "Phase 3 of the eDNA meta-skill stack: gated DwC-A publishing to GBIF and OBIS"
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+
+[dependencies]
+# Confirmed during preflight: pixi 0.70.1 on PATH; python>=3.11 via pixi (pinned decision).
+python = ">=3.11,<3.13"
+pandas = "*"
+pyarrow = "*"
+requests = "*"
+
+[tasks]
+# Sub-skill 1: preflight (input validation + HARD GATE a sign-off)
+publish-preflight = { cmd = "python3 scripts/op_preflight.py", cwd = "." }
+# Sub-skill 2: gbif-publish (plain-Python DwC-A occurrence-core archive)
+gbif-publish = { cmd = "python3 scripts/gbif_publish.py", cwd = "." }
+# Sub-skill 3: obis-publish (Event Core + extensions; realm + WoRMS gates)
+obis-publish = { cmd = "python3 scripts/obis_publish.py", cwd = "." }
+# Sub-skill 4: validate (GBIF validator online + local fallback; OBIS structural checks)
+validate = { cmd = "python3 scripts/validate.py", cwd = "." }
+# Battle-test: synthetic fixture end-to-end dry run
+battle-test = "python3 test/run_battle_test.py"
+# Structural smoke tests
+test-smoke = "python3 test_smoke.py"
+# Self-update check (see bin/skill-update-check.py for the verdict legend)
+update-check = "python3 bin/skill-update-check.py"

@@ -1,0 +1,29 @@
+{
+  "name": "occurrence-crosscheck",
+  "components": [
+    {
+      "dir": "crosscheck",
+      "pre_merge_skill": "edna-crosscheck",
+      "pre_merge_head": "01e658294dc917bd2e9c2243d32faf5fcc578724",
+      "phase": 1,
+      "role": "Realm-aware cross-check of eDNA observations vs GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim envelopes"
+    },
+    {
+      "dir": "viz",
+      "pre_merge_skill": "occurrence-viz",
+      "pre_merge_head": "177d9d36d4a9e381fd3e6039e68c763c281c00ec",
+      "phase": 2,
+      "role": "Publication-ready occurrence figures (R/ggplot2), standalone DwC-shaped input"
+    },
+    {
+      "dir": "publish",
+      "pre_merge_skill": "occurrence-publish",
+      "pre_merge_head": "8878791ad06d61d802a332162c2ac4963dc6b7a7",
+      "phase": 3,
+      "role": "DwC-A packaging for GBIF/IPT and OBIS (Event Core + DNA-derived data) with hard sign-off/realm/WoRMS gates"
+    }
+  ],
+  "merged_at": "2026-08-31",
+  "merge_version": "2.0.0",
+  "history_bundles": "../../../archieved/*.bundle"
+}

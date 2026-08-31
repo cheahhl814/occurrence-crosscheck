@@ -1,0 +1,5 @@
+occurrenceID,scientificName,decimalLatitude,decimalLongitude,eventDate,marker
+1,Gadus morhua,3.5,102.0,2026-06-01,12S
+2,Salmo salar,3.7,102.1,2026-06-01,12S
+3,Notasdfghjkl fakespecies,3.6,102.05,2026-06-01,12S
+4,Thunnus albacares,4.0,101.8,2026-06-02,12S

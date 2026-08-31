@@ -1,0 +1,30 @@
+[workspace]
+authors = ["AiX-BIO Agent <cheahhl814@gmail.com>"]
+channels = ["conda-forge", "bioconda", "anaconda"]
+name = "edna-crosscheck"
+platforms = ["linux-64"]
+version = "0.1.0"
+
+[tasks]
+setup-fishbase = "Rscript -e 'if (!requireNamespace(\"rfishbase\", quietly=TRUE)) install.packages(\"rfishbase\", repos=\"https://cloud.r-project.org\")'"
+crosscheck = "bash bin/run-crosscheck.sh"
+update-check = "python3 bin/skill-update-check.py"
+smoke-test = "python3 test/test_smoke.py"
+
+[dependencies]
+r-base = ">=4.5.3,<4.6"
+r-duckdb = ">=1.5.5,<2"
+r-arrow = ">=25.0.0,<26"
+r-jsonlite = ">=2.0.0,<3"
+r-dplyr = ">=1.2.1,<2"
+python = "3.11.*"
+pandas = ">=3.0.5,<4"
+pyarrow = ">=25.0.0,<26"
+duckdb = ">=1.5.5,<2"
+requests = ">=2.34.2,<3"
+xarray = ">=2026.7.0,<2027"
+rasterio = ">=1.4.4,<2"
+rioxarray = ">=0.19.0,<0.20"
+netcdf4 = ">=1.7.4,<2"
+numpy = ">=2.4.6,<3"
+libuv = ">=1.52.1,<2"

@@ -1,0 +1,55 @@
+{
+  "skill_name": "occurrence-publish",
+  "run_dir": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills/occurrence-publish",
+  "phase": "3 of the marine-edna meta-skill stack (PLAN-marine-edna-meta-skill.md §6)",
+  "skill_shape": "multi-tool-pipeline",
+  "primary_language": "python>=3.11",
+  "orchestration": "bash-first (pixi tasks); no Nextflow runner",
+  "with_nextflow_runner": false,
+  "target_tiers": ["large"],
+  "git_initialized": true,
+  "git_remote": null,
+  "deploy_allowed": false,
+  "push_allowed": false,
+  "preflight_verdict": "GO",
+  "version": "1.0.0",
+  "updated": "2026-08-31",
+  "sub_skills": [
+    "preflight/preflight-publish",
+    "gbif-publish/gbif-publish",
+    "obis-publish/obis-publish",
+    "validate/validate-dwca"
+  ],
+  "tool_inventory": [
+    "python",
+    "pandas",
+    "pyarrow",
+    "requests"
+  ],
+  "docs_corpus": [
+    {"tool": "dwca-profile", "sources": ["https://ipt.gbif.org/manual/en/ipt/latest/dwca-guide", "https://docs.gbif.org/publishing-dna-derived-data/en/"], "why": "DwC-A profile: occurrence core + extensions + meta.xml"},
+    {"tool": "eml-2", "sources": ["https://eml.ecoinformatics.org/", "https://ipt.gbif.org/manual/en/ipt/latest/eml"], "why": "EML 2.x metadata for GBIF/IPT"},
+    {"tool": "dna-derived-data-extension", "sources": ["https://docs.gbif.org/publishing-dna-derived-data/en/"], "why": "DNA-derived data extension terms"},
+    {"tool": "obis-dna-data", "sources": ["https://manual.obis.org/dna_data.html"], "why": "OBIS Event Core + DNA-derived data + eMoF/OBIS-ENV-DATA pattern"},
+    {"tool": "gbif-data-validator", "sources": ["https://www.gbif.org/tools/data-validator", "https://www.gbif.org/developer/summary"], "why": "online validator POST endpoint (/v1 validation API)"},
+    {"tool": "ednabridge-conv", "sources": ["https://github.com/gbif/eDNAbridge"], "why": "reference only — GBIF leg wraps the eDNAbridge path conceptually; our runnable code is the Python DwC-A builder"}
+  ],
+  "hard_gates": {
+    "a_signoff": "flagged_occurrences.tsv rows with signoff_status == 'pending' are hard-blocked from publish; publish aborts with a report until every row is approved/excluded (PLAN §11.4)",
+    "b_obis_realm": "obis-publish refuses with a clear message when realm != 'marine' (OBIS does not accept terrestrial/freshwater datasets)",
+    "c_worms_lsid": "obis-publish hard-rejects any record without a WoRMS-valid scientificNameID (urn:lsid:marinespecies.org:taxname:N)"
+  },
+  "input_contracts": {
+    "enriched_parquet": "PLAN §11.2 — one row = taxon x site x record; scientificName, acceptedScientificName, gbif_taxonKey, worms_AphiaID, taxon_match_status, env_* columns, qc_flags, qc_level, realm",
+    "flagged_occurrences_tsv": "PLAN §11.4 — §11.2 columns + signoff_status in {pending, approved, excluded}; pending hard-blocked",
+    "run_manifest": "PLAN §11.1 params.json of the edna-crosscheck run; realm is dataset-level"
+  },
+  "output_contracts": {
+    "gbif_dwca": "*_gbif_dwca.zip (occurrence core + DNA-derived data extension + meta.xml + EML 2.0)",
+    "obis_dwca": "*_obis_dwca.zip (Event Core hierarchy + occurrence ext + DNA-derived data ext + eMoF/OBIS-ENV-DATA; marine only)",
+    "validation": "*_gbif_validation.json + *_obis_validation.json (validator reports)",
+    "publish_commands": "publish_commands.sh — ready-to-run IPT/eDNAbridge/OBIS-ipt commands the user executes; NO live publishing calls from this skill in v1"
+  },
+  "network_policy": "read-only network calls allowed (GBIF validator POST, docs fetches); no live IPT/OBIS publish calls",
+  "pinned_decisions_source": "task prompt (orchestrator handoff, 2026-08-31) — resolved autonomously; deviations recorded in preflight.md §Deviations"
+}

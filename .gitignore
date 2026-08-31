@@ -1,0 +1,13 @@
+# nested pixi envs are self-contained per sub-skill; keep out of the meta repo
+crosscheck/.pixi/
+viz/.pixi/
+publish/.pixi/
+*/__pycache__/
+__pycache__/
+*.pyc
+work/
+runs/
+viz_out/
+test/output/
+docs-corpus/.fingerprints/
+.env

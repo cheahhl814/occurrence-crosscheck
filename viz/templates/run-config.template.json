@@ -1,0 +1,31 @@
+{
+  "realm": "marine",
+  "_comment": "occurrence-viz run config template. Copy to e.g. runs/myrun/run-config.json and edit. realm: marine | freshwater | terrestrial (dataset-level declaration, PLAN SCOPE banner). Realm-awareness = THIS FILE, never code branching. See config/run-config.<realm>.json for realm-filled examples.",
+  "output_formats": ["png", "pdf"],
+  "figures": {
+    "occurrence_map": true,
+    "depth_profile": true,
+    "env_envelope": true,
+    "trait_space": true
+  },
+  "map": {
+    "palette": "viridis",
+    "coastline": "auto",
+    "coast_scale": "medium",
+    "max_points": 20000,
+    "max_species": 12,
+    "bbox": null
+  },
+  "profiles": {
+    "x_variables": ["depth_m", "env_wc_elev", "elev"],
+    "x_label": "Depth / Elevation",
+    "figure_title": "Environmental profile",
+    "reverse_y": false,
+    "envelope_variables": [],
+    "envelope_label": "value",
+    "trait_space": true
+  },
+  "qc": {
+    "onland_flagged": false
+  }
+}

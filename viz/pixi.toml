@@ -1,0 +1,40 @@
+[workspace]
+name = "occurrence-viz"
+version = "1.0.0"
+description = "Realm-aware publication-quality occurrence visualization (maps, depth/elevation profiles, env envelopes, trait space) for DwC-shaped tables. R renderer: ggplot2 + sf + rnaturalearth; arrow for parquet. PLAN-marine-edna-meta-skill.md Phase 2."
+channels = ["conda-forge"]
+platforms = ["linux-64"]
+
+[dependencies]
+# Every tool here was confirmed via `pixi search -c conda-forge` during preflight (params.json: status "found").
+r-base = ">=4.3"
+r-ggplot2 = "*"
+r-sf = "*"
+r-rnaturalearth = "*"
+r-rnaturalearthdata = "*"
+r-maps = "*"
+r-arrow = "*"
+r-scico = "*"
+r-viridis = "*"
+r-patchwork = "*"
+r-scales = "*"
+r-optparse = "*"
+r-dplyr = "*"
+r-tidyr = "*"
+r-readr = "*"
+r-jsonlite = "*"
+
+[tasks]
+# Realm-aware run config: config/run-config.<realm>.json (marine | freshwater | terrestrial)
+# Full figure set for one input table (map + profiles + report):
+viz = "Rscript bin/viz_run.R"
+# Individual phases (mirrors the sub-skills):
+preflight = "Rscript bin/viz_run.R --phase preflight"
+maps = "Rscript bin/plot_map.R"
+profiles = "Rscript bin/plot_profiles.R"
+report = "Rscript bin/build_report.R"
+# Battle-test fixture generation:
+test-fixture = "Rscript test/make_test_fixture.R"
+# Self-check: compares this skill's git SHA to upstream (github.com/cheahhl814/occurrence-viz).
+# See bin/skill-update-check.py for the verdict legend (UP-TO-DATE / LOCAL-AHEAD / BEHIND-BY-N / OFFLINE / NO-ORIGIN).
+update-check = "python3 bin/skill-update-check.py"

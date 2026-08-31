@@ -1,0 +1,13 @@
+# --- pixi env (pixi.lock is committed; .pixi/ is the installed env) ---
+.pixi/
+# run/scratch outputs
+work/
+viz_out/
+runs/
+test/work/
+*.log
+# docs-ingest fingerprints are derived artifacts
+docs-corpus/.fingerprints/
+# python bytecode
+__pycache__/
+*.pyc

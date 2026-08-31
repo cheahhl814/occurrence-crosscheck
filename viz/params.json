@@ -1,0 +1,59 @@
+{
+  "skill_name": "occurrence-viz",
+  "skill_title": "Occurrence Visualization (maps, depth/elevation profiles, env envelopes, trait space)",
+  "skill_description": "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md). Standalone, realm-aware (marine | freshwater | terrestrial) publication-quality plotting of DwC-shaped occurrence tables: species occurrence maps (rnaturalearth basemap with maps::map() fallback, point subsampling), realm-routed environmental profiles (marine -> depth profiles; freshwater/terrestrial -> elevation/bioclim profiles via the same plotting code with the x-axis variable taken from run config), env envelope plots, optional trait-space plots, and multi-panel report figures with a captions manifest. Consumes any parquet/CSV with the minimal DwC columns scientificName, decimalLatitude, decimalLongitude, eventDate (PLAN §11.6) — e.g. plain obis-gbif-fetch output or edna-crosscheck enriched.parquet. Renderer pinned to R (ggplot2 + sf + rnaturalearth, arrow for parquet).",
+  "skill_version": "1.0.0",
+  "skill_updated": "2026-08-31",
+  "skill_triggers": [
+    "occurrence visualization",
+    "species occurrence map",
+    "depth profile plot eDNA",
+    "gbif obis plot",
+    "env envelope plot",
+    "plot enrichment parquet",
+    "eDNA occurrence figures",
+    "realm-aware occurrence viz"
+  ],
+  "run_dir": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills/occurrence-viz",
+  "skills_root": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills",
+  "github_org": "cheahhl814",
+  "github_repo": "github.com/cheahhl814/occurrence-viz",
+  "skill_shape": "multi-tool-pipeline",
+  "sub_skills": ["preflight", "maps", "profiles-env", "report"],
+  "tool_inventory": [
+    {"name": "r-base", "version": ">=4.3", "role": "runtime", "status": "found"},
+    {"name": "r-ggplot2", "version": "*", "role": "renderer", "status": "found"},
+    {"name": "r-sf", "version": "*", "role": "spatial", "status": "found"},
+    {"name": "r-rnaturalearth", "version": "*", "role": "basemap", "status": "found"},
+    {"name": "r-rnaturalearthdata", "version": "*", "role": "basemap-data", "status": "found"},
+    {"name": "r-maps", "version": "*", "role": "basemap-fallback", "status": "found"},
+    {"name": "r-arrow", "version": "*", "role": "parquet-io", "status": "found"},
+    {"name": "r-scico", "version": "*", "role": "palette", "status": "found"},
+    {"name": "r-viridis", "version": "*", "role": "palette", "status": "found"},
+    {"name": "r-patchwork", "version": "*", "role": "multipanel", "status": "found"},
+    {"name": "r-scales", "version": "*", "role": "scale-formatting", "status": "found"},
+    {"name": "r-optparse", "version": "*", "role": "cli", "status": "found"},
+    {"name": "r-dplyr", "version": "*", "role": "data-wrangling", "status": "found"},
+    {"name": "r-tidyr", "version": "*", "role": "data-wrangling", "status": "found"},
+    {"name": "r-readr", "version": "*", "role": "csv-io", "status": "found"},
+    {"name": "r-jsonlite", "version": "*", "role": "config-json", "status": "found"}
+  ],
+  "pixi_available": true,
+  "git_initialized": true,
+  "disk_gb_free": 135,
+  "target_tiers": ["large"],
+  "with_nextflow_runner": false,
+  "renderer": "R",
+  "input_contract": "PLAN-marine-edna-meta-skill.md §11.6 — standalone DwC minimal columns (scientificName, decimalLatitude, decimalLongitude, eventDate); env/trait columns optional",
+  "realm_routing": {
+    "marine": {"profile_variable": "depth (decimalLatitude/Longitude map + depth-profile x-axis: depth_m)", "onland_check": "flag-on-map"},
+    "freshwater": {"profile_variable": "elevation/bioclim (env_wc_* columns)", "onland_check": "skip"},
+    "terrestrial": {"profile_variable": "elevation/bioclim (env_wc_* columns)", "onland_check": "skip"}
+  },
+  "verdict": "GO",
+  "warnings": [
+    "r-rnaturalearthhires not packaged on conda-forge — high-res basemap layer unavailable via pixi; skill uses rnaturalearthdata (medium, 1:50m) as baseline with maps::map() fallback, mirroring the geocurate_inventory.R fallback pattern",
+    "Initial pixi search used r-rnaturalearth/r-naturalearthdata misspellings (r-naturalearth* NOT_FOUND); re-verified as r-rnaturalearth / r-rnaturalearthdata (FOUND)"
+  ],
+  "generated": "2026-08-31T15:25:00+08:00"
+}

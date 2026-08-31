@@ -1,0 +1,7 @@
+.pixi/
+work/
+test/battle-test-out/
+env-extract/.cache/
+docs-corpus/.fingerprints
+*.pyc
+__pycache__/

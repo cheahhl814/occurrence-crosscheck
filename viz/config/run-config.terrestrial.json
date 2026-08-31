@@ -1,0 +1,30 @@
+{
+  "realm": "terrestrial",
+  "description": "Run config template: TERRESTRIAL realm (PLAN-marine-edna-meta-skill.md Phase 2). Elevation/bioclim envelope + occurrence map. Same plotting code as the marine config — only the x-axis variables/labels differ.",
+  "output_formats": ["png", "pdf"],
+  "figures": {
+    "occurrence_map": true,
+    "depth_profile": false,
+    "env_envelope": true,
+    "trait_space": true
+  },
+  "map": {
+    "palette": "viridis",
+    "coastline": "auto",
+    "coast_scale": "medium",
+    "max_points": 20000,
+    "max_species": 12
+  },
+  "profiles": {
+    "x_variables": ["elev", "elevation", "env_wc_elev", "env_wc_bio1"],
+    "x_label": "Elevation (m a.s.l.)",
+    "figure_title": "Elevation profile",
+    "reverse_y": false,
+    "envelope_variables": ["env_wc_bio1", "env_wc_bio12", "elev"],
+    "envelope_label": "WorldClim/CHELSA bioclim + elevation",
+    "trait_space": true
+  },
+  "qc": {
+    "onland_flagged": false
+  }
+}

@@ -1,0 +1,6 @@
+.pixi/
+work/
+__pycache__/
+*.pyc
+docs-corpus/.fingerprints/
+test/output/

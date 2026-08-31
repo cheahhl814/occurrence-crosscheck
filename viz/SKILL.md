@@ -1,0 +1,140 @@
+---
+name: occurrence-viz
+description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware publication-quality visualization of DwC-shaped occurrence tables — species occurrence maps (rnaturalearth + geocurate fallback pattern with fixed-seed point subsampling), realm-routed environmental profiles (marine → depth profiles; freshwater/terrestrial → elevation/bioclim profiles via the SAME plotting code with the x-axis variable from run config), per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Renderer PINNED to R (ggplot2 + sf + rnaturalearth; arrow for parquet). Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
+version: 1.0.0
+updated: "2026-08-31"
+triggers:
+  - "occurrence visualization"
+  - "species occurrence map"
+  - "plot gbif obis data"
+  - "depth profile plot"
+  - "elevation profile eDNA"
+  - "env envelope plot"
+  - "figure captions eDNA"
+  - "realm-aware occurrence viz"
+requires:
+  - "pixi (pixi install from this skill's pixi.toml — R 4.3+ via conda-forge)"
+  - "R packages: ggplot2, sf, rnaturalearth(+data), maps, arrow, scico, viridis, patchwork, scales, optparse, dplyr, tidyr, readr, jsonlite"
+  - "no network access — fully local, no API calls, no tile servers"
+---
+
+# Skill: occurrence-viz
+
+> **v1.0.0.** Realm-aware, standalone publication-quality occurrence visualization. This file is a **router** — the sub-skills do the work. Built with the bioinfo-skill-creator meta-skill per the BettaMt / AiX-BIO convention (preflight → build → debug → battle-test evidence chain; explicit ask-user stop points; signature libraries; docs-corpus).
+
+## The realm rule (READ FIRST)
+
+**Realm-awareness is a run-config concern, never a code concern.** One plotting code base; the realm run config (`config/run-config.<realm>.json`) picks the x-axis variable and figure family:
+
+| Realm config | Profile x-variable (first present wins) | Notes |
+|---|---|---|
+| `run-config.marine.json` | `depth_m` → `depth` → `env_bio_depth_m` | depth profile; on-land visual sanity note on maps |
+| `run-config.freshwater.json` | `elev` → `elevation` → `env_wc_elev` → `trait_depth_min_m` | elevation/bioclim; riparian on-land records normal |
+| `run-config.terrestrial.json` | `elev` → `elevation` → `env_wc_elev` → `env_wc_bio1` | elevation/bioclim envelope; on-land is normal |
+
+Every plotting script branches on the **config**, never `if (realm == ...)`. Realm is a dataset-level declaration (PLAN §2 SCOPE banner).
+
+Sub-skill registry (frontmatter names): `occviz-input-preflight` (preflight/input-preflight), `occviz-occurrence-maps` (maps/occurrence-maps), `occviz-env-profiles` (profiles-env/env-profiles), `occviz-figure-report` (report/figure-report).
+
+## Input contract (PINNED — PLAN §11.6)
+
+```
+required: scientificName | decimalLatitude | decimalLongitude | eventDate
+optional (figures render only when columns exist):
+  env_bio_* | env_wc_*  (crosscheck env-extract, prefixed per §11.1)
+  trait_depth_min_m | trait_depth_max_m | trait_trophic_level | trait_body_size_cm
+  gbif_taxonKey | worms_AphiaID | qc_flags | qc_level | env_layer_class | acceptedScientificName
+```
+
+Any parquet/CSV/TSV meeting the minimal contract works: **plain `obis-gbif-fetch` output** (maps render immediately — env/trait figures skip with a logged reason) **or** `edna-crosscheck` `enriched.parquet` (full figure set when columns are populated).
+
+**This skill never flags.** `ENVELOPE_VIOLATION` / `OUT_OF_RANGE` / `ON_LAND` flags are edna-crosscheck's job; viz draws observations so a human can judge flags.
+
+## Pipeline — 4 sub-skills (phase detection: state of the run's `outdir/`)
+
+| # | Phase | Goal | Sub-skill | Outputs |
+|---|---|---|---|---|
+| 1 | Preflight | Validate input + config; run summary; figure-set feasibility | `preflight/input-preflight/SKILL.md` | preflight summary + `work/figure_status.jsonl` |
+| 2 | Maps | Occurrence map + per-species small multiples | `maps/occurrence-maps/SKILL.md` | `fig/01_*`, `fig/02_*` |
+| 3 | Profiles | Realm-routed profile + envelopes + (optional) trait space | `profiles-env/env-profiles/SKILL.md` | `fig/03_*`, `fig/04_*`, `fig/05_*` (skips logged) |
+| 4 | Report | Multi-panel overview + captions manifest + run report | `report/figure-report/SKILL.md` | `fig/06_*`, `fig/figure-captions.md`, `figure-report.md` |
+
+Run everything:
+
+```bash
+pixi install                                    # once
+pixi run viz --input <table.parquet> \
+    --config config/run-config.marine.json \
+    --outdir runs/myrun --input-label "<label>"
+# inspect
+cat runs/myrun/figure-report.md
+cat runs/myrun/fig/figure-captions.md
+```
+
+Single phases:
+
+```bash
+pixi run preflight ...   # no figures
+pixi run maps ...        # Rscript bin/plot_map.R ...
+pixi run profiles ...    # Rscript bin/plot_profiles.R ...
+pixi run report ...      # Rscript bin/build_report.R ...
+```
+
+Each phase appends to the append-only ledger `work/figure_status.jsonl` and saves its ggplot snapshot to `work/plots/*.rds`. If the ledger is missing when `report/` runs, the sub-skill refuses and points you back to phase 2/3.
+
+## Realm matrix (SCOPE-banner compliance)
+
+| Behavior | Marine | Freshwater | Terrestrial |
+|---|---|---|---|
+| Occurrence map + facets | ✅ | ✅ | ✅ |
+| Profile figure | depth (`depth_m`…) | elevation/bioclim | elevation/bioclim |
+| Env envelope | Bio-ORACLE (`env_bio_*`) | WorldClim/CHELSA (`env_wc_*`) | WorldClim/CHELSA (+ SoilGrids later) |
+| Trait space | FishBase cols when present | FishBase cols (finfish) | typically absent → skipped |
+| On-land records | visual sanity note | normal (note) | normal |
+
+Mixed-realm projects run as separate runs per realm (dataset-level rule).
+
+## Output contract
+
+- PNG at **300 dpi** + vector **PDF** per figure (pinned baseline). SVG optional in `output_formats` (needs `svglite`).
+- `fig/figure-captions.md`: numbered, editable captions + per-figure file lists + records represented.
+- `figure-report.md`: run header (input, realm, config) + rendered/skipped ledger.
+- `work/` is scratch (git-ignored); `fig/` + `figure-report.md` are the bundle.
+
+## Design invariants (do not break)
+
+1. **One renderer**: R only (pinned). No Python renderer, no second plotting stack.
+2. **One plotting code path for all realms** — realm differences live in the config JSON.
+3. **Graceful absence**: env/trait figures skip with a machine-readable reason; maps always render from the minimal contract.
+4. **Reproducible subsampling**: geocurate pattern — `set.seed(42)`, cap `map.max_points`, record counts in captions.
+5. **Basemap fallback chain**: rnaturalearth (media, rnaturalearthdata) → `maps::map("world")` → bare frame; never hard-fail on a missing basemap dataset.
+6. **Flags live upstream**: viz plots; it never computes or drops anything based on values.
+7. **Sibling decoupling**: consumes §11.6-shaped files only; never imports edna-crosscheck / occurrence-publish code.
+
+## docs-corpus
+
+Offline Markdown snapshots in `docs-corpus/` (fingerprinted in `docs-corpus/.fingerprints/sha256.txt`):
+`ggplot2/`, `sf/`, `rnaturalearth/`, `arrow-r/`, `scico/`, `viridis/`. Read these before inventing function names/args.
+
+## Self-update check
+
+```bash
+pixi run update-check
+# UP-TO-DATE (0) / LOCAL-AHEAD (0) / BEHIND-BY-N (1) / OFFLINE (2) / NO-ORIGIN (2)
+```
+
+## Battle test
+
+```bash
+pixi run test-fixture          # (re)generate synthetic fixtures under test/
+pixi run battle-test           # structural smoke tests (python3 test_smoke.py)
+# full realm-matrix run:
+pixi run viz --input test/test_fixture_marine.parquet --config config/run-config.marine.json --outdir runs/bt_marine --input-label "bt marine"
+pixi run viz --input test/test_fixture_terrestrial.parquet --config config/run-config.terrestrial.json --outdir runs/bt_terr --input-label "bt terrestrial"
+```
+
+## Provenance
+
+- Built with [bioinfo-skill-creator](https://github.com/cheahhl814/bioinfo-skill-creator) (v1.1.0), PLAN-marine-edna-meta-skill.md Phase 2 spec.
+- Point-subsampling + basemap fallback pattern reused from the workspace `AMPLICON/bin/geocurate_inventory.R` experience (pinned).
+- Sibling skills: `edna-crosscheck` (Phase 1, file contract §11.2) and `occurrence-publish` (Phase 3) — file-contract only, no code coupling.

@@ -1,0 +1,26 @@
+{
+  "skill_run": "edna-crosscheck",
+  "realm": "marine",
+  "marker": "12S",
+  "bbox": [99.5, 1.5, 104.5, 6.5],
+  "env_source": {
+    "marine": "bio-oracle-v3",
+    "freshwater": "worldclim-or-chelsa",
+    "terrestrial": "worldclim-or-chelsa"
+  },
+  "env_layers": {
+    "bio_oracle": ["thetao", "so"],
+    "worldclim_chelsa": ["bio1", "bio12", "elev"]
+  },
+  "env_scenario": "present",
+  "backbones": {
+    "gbif": true,
+    "worms": "marine-only",
+    "fishbase": true
+  },
+  "obis_lookup": true,
+  "env_column_prefix": {
+    "bio_oracle": "env_bio_",
+    "worldclim_chelsa": "env_wc_"
+  }
+}
