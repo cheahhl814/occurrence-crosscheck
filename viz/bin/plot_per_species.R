@@ -32,8 +32,18 @@ source(file.path(script_dir, "lib_viz.R"))
 
 `%||%` <- function(a, b) if (is.null(a) || (length(a) == 1 && is.na(a) && !is.logical(a))) b else a
 
+# haversine distance (km) between a site and a set of record coordinates
+haversine_km <- function(lat1, lon1, lat2, lon2) {
+  R <- 6371.0088; to_rad <- pi / 180
+  dlat <- (lat2 - lat1) * to_rad; dlon <- (lon2 - lon1) * to_rad
+  a <- sin(dlat / 2)^2 + cos(lat1 * to_rad) * cos(lat2 * to_rad) * sin(dlon / 2)^2
+  2 * R * asin(sqrt(a))
+}
+
 opt <- parse_args(OptionParser(option_list = list(
   make_option("--input", type = "character", help = "enriched.parquet (§11.2)"),
+  make_option("--config", type = "character", default = NULL, help = "run config (accepted for run_phase compatibility)"),
+  make_option("--input-label", type = "character", default = NULL, help = "alias of --label (run_phase compatibility)"),
   make_option("--overlay", type = "character", help = "context_occurrences.csv (GBIF/OBIS backdrop)"),
   make_option("--params", type = "character", help = "crosscheck params.json"),
   make_option("--counts", type = "character", default = "work/occurrence_counts.json",
@@ -41,7 +51,9 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--outdir", type = "character", default = "species_maps"),
   make_option("--buffer-km", type = "numeric", default = NULL,
               help = "buffer radius override; default = params.json buffer km"),
-  make_option("--label", type = "character", default = "eDNA detections"),
+  make_option("--near-km", type = "numeric", default = 100,
+              help = "site-level corroboration threshold: nearest known record within this distance = CONCORDANT"),
+  make_option("--label", type = "character", default = NULL, help = "overrides --input-label"),
   make_option("--max-species", type = "numeric", default = 200)
 )))
 
@@ -57,6 +69,7 @@ df$trait_depth_max_m <- as.numeric(df$trait_depth_max_m)
 params <- jsonlite::fromJSON(opt$params)
 counts <- if (file.exists(opt$counts)) jsonlite::fromJSON(opt$counts) else list()
 
+opt_label <- if (!is.null(opt$label)) opt$label else if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections"
 buffer_km <- if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else {
   b <- params$buffer; if (!is.null(b) && !is.null(b$km) && !is.na(b$km)) b$km else 2000
 }
@@ -106,8 +119,19 @@ for (nm in species) {
   gb <- if (!is.null(e$gbif)) e$gbif else 0L
   ob <- if (!is.null(e$obis)) e$obis else 0L
   n_cor <- sum(c(gb, ob), na.rm = TRUE)
-  verdict <- if (n_cor > 0) "EXPECTED" else "UNEXPECTED"
-  col_det <- if (n_cor > 0) "#2c6ea3" else "#e84393"
+  # three categories (geocurate-consistent): corroboration in the buffer is
+  # concordance only if records reach down to the site scale; a species with
+  # records somewhere in-region but none near the site is DISCORDANT; zero
+  # records at all is NO_RECORD — absence of evidence, never a discordance claim
+  near <- if (nrow(ctx) > 0) min(haversine_km(site_lat, site_lon,
+                                              ctx$decimalLatitude, ctx$decimalLongitude)) else Inf
+  if (n_cor == 0) {
+    verdict <- "NO_RECORD";  col_det <- "#8e44ad"; det_note <- "no GBIF/OBIS records anywhere in the buffer"
+  } else if (near <= opt[["near-km"]]) {
+    verdict <- "CONCORDANT"; col_det <- "#2c6ea3"; det_note <- sprintf("nearest known record %.0f km from site", near)
+  } else {
+    verdict <- "DISCORDANT"; col_det <- "#e67e22"; det_note <- sprintf("nearest known record %.0f km away (beyond the %s km site threshold)", near, format(opt[["near-km"]], big.mark = ","))
+  }
 
   ex <- c(site_lon - buffer_km / 111 * 1.12, site_lat - buffer_km / 111 * 1.12,
           site_lon + buffer_km / 111 * 1.12, site_lat + buffer_km / 111 * 1.12)
@@ -139,13 +163,13 @@ for (nm in species) {
     coord_sf(xlim = ex[c(1, 3)], ylim = ex[c(2, 4)], expand = FALSE) +
     labs(title = nm,
          subtitle = sprintf(
-           "%s: %s — %s GBIF · %s OBIS records inside the %s km buffer%s",
-           opt$label, verdict,
+           "%s: %s — %s GBIF · %s OBIS records in the %s km buffer · %s%s",
+           opt_label, verdict,
            format(gb, big.mark = ","), format(ob, big.mark = ","),
-           format(buffer_km, big.mark = ","), depth_note),
+           format(buffer_km, big.mark = ","), det_note, depth_note),
          x = "Longitude", y = "Latitude",
          caption = sprintf("pink diamond = eDNA detection site · grey = GBIF/OBIS known occurrences · dashed ring = %s km buffer · %s",
-                           format(buffer_km, big.mark = ","), opt$label)) +
+                           format(buffer_km, big.mark = ","), opt_label)) +
     theme_bw(base_size = 10) +
     theme(panel.grid = element_line(colour = "grey92", linewidth = 0.25),
           plot.title = element_text(face = "italic", size = 12),

@@ -23,7 +23,17 @@ option_list <- list(
   make_option("--outdir", type = "character", default = "viz_out", help = "Output directory"),
   make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
   make_option("--overlay", type = "character", default = NULL,
-              help = "Context occurrences CSV (forwarded to the maps worker)"),
+              help = "Context occurrences CSV (passed to the maps worker)"),
+  make_option("--per-species", action = "store_true", default = FALSE,
+              help = "maps phase also emits per-species concordance/discordance maps (plot_per_species.R)"),
+  make_option("--near-km", type = "numeric", default = 100,
+              help = "site-level corroboration threshold for the per-species verdicts"),
+  make_option("--counts", type = "character", default = NULL,
+              help = "occurrence_counts.json (per-species verdict source)"),
+  make_option("--params", type = "character", default = NULL,
+              help = "crosscheck params.json (declared buffer zone; forwarded to per-species maps)"),
+  make_option("--buffer-km", type = "numeric", default = NULL,
+              help = "buffer radius for per-species maps (default: params buffer km)"),
   make_option("--only", type = "character", default = "maps,profiles,report",
               help = "Comma-separated subset of phases to run"),
   make_option("--phase", type = "character", default = NULL,
@@ -85,15 +95,26 @@ run_phase <- function(phase, script, args_extra = character(0)) {
 # workers validate the input themselves; --input is passed through. For maps
 # and profiles the input flag is required:
 if ("preflight" %in% phases) phases <- setdiff(phases, "preflight")
+if (isTRUE(opt[["per-species"]]) && !"speciesmaps" %in% phases) phases <- c(phases, "speciesmaps")
 if (length(phases) == 0) {
   log_msg("preflight-only run complete (no figures requested).")
   quit(status = 0)
 }
 ok <- TRUE
 for (ph in phases) {
-  script <- switch(ph, maps = "plot_map.R", profiles = "plot_profiles.R", report = "build_report.R",
-                   stop(sprintf("unknown phase '%s' (maps | profiles | report)", ph), call. = FALSE))
-  ok <- run_phase(ph, script, if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)) && ok
+  script <- switch(ph, maps = "plot_map.R", speciesmaps = "plot_per_species.R",
+                   profiles = "plot_profiles.R", report = "build_report.R",
+                   stop(sprintf("unknown phase '%s' (maps | speciesmaps | profiles | report)", ph), call. = FALSE))
+    extra <- if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)
+  if (ph == "speciesmaps") {
+    if (is.null(opt$params)) stop("--per-species requires --params (crosscheck params.json)", call. = FALSE)
+    extra <- c("--params", opt$params, "--near-km", format(opt[["near-km"]], digits = 6),
+               "--buffer-km", format(if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else 2000, digits = 8),
+               "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
+    if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
+    if (!is.null(opt$counts)) extra <- c(extra, "--counts", opt$counts)
+  }
+  ok <- run_phase(ph, script, extra) && ok
 }
 log_msg(sprintf("viz_run complete (all phases ok: %s). Outputs in %s/fig + %s/figure-report.md", ok, opt$outdir, opt$outdir))
 if (!ok) quit(status = 1)
