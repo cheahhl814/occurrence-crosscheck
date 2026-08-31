@@ -38,3 +38,4 @@ test-fixture = "Rscript test/make_test_fixture.R"
 # Self-check: compares this skill's git SHA to upstream (github.com/cheahhl814/occurrence-viz).
 # See bin/skill-update-check.py for the verdict legend (UP-TO-DATE / LOCAL-AHEAD / BEHIND-BY-N / OFFLINE / NO-ORIGIN).
 update-check = "python3 bin/skill-update-check.py"
+species-maps = "Rscript bin/plot_per_species.R"
