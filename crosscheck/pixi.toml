@@ -10,6 +10,7 @@ setup-fishbase = "Rscript -e 'if (!requireNamespace(\"rfishbase\", quietly=TRUE)
 crosscheck = "bash bin/run-crosscheck.sh"
 species-list = "bash bin/run_species.sh"
 coordinates-checklist = "bash bin/run_coordinates.sh"
+genus-narrow = "bash bin/run_genus_narrow.sh"
 update-check = "python3 bin/skill-update-check.py"
 smoke-test = "python3 test/test_smoke.py"
 
