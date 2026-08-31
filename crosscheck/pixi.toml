@@ -8,6 +8,8 @@ version = "0.1.0"
 [tasks]
 setup-fishbase = "Rscript -e 'if (!requireNamespace(\"rfishbase\", quietly=TRUE)) install.packages(\"rfishbase\", repos=\"https://cloud.r-project.org\")'"
 crosscheck = "bash bin/run-crosscheck.sh"
+species-list = "bash bin/run_species.sh"
+coordinates-checklist = "bash bin/run_coordinates.sh"
 update-check = "python3 bin/skill-update-check.py"
 smoke-test = "python3 test/test_smoke.py"
 

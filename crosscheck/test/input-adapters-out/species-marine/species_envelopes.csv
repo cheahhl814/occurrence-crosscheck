@@ -1,0 +1,5 @@
+gbif_extent_bbox,gbif_extent_n,gbif_global_records,obis_global_records,scientificName,trait_body_size_cm,trait_depth_max_m,trait_depth_min_m,trait_trophic_level
+"[-109.783, -54.931, 175.276, 53.0]",120,442178,902,Bos taurus,,,,
+"[-74.004, 39.626, 35.077, 69.94]",120,2635829,3116283,Gadus morhua,,,,
+,0,0,0,Notasdfghjkl fakespecies,,,,
+"[-156.435, -37.522, 177.966, 40.917]",120,174814,246964,Thunnus albacares,,,,

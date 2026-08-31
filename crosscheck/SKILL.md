@@ -17,7 +17,15 @@ requires:
 
 # Meta-skill: edna-crosscheck
 
-Phase 1 of the eDNA meta-skill stack described in `../../../PLAN-marine-edna-meta-skill.md`. This
+Phase 1 of the eDNA meta-skill stack (merged into `../../occurrence-crosscheck`) described in `../../../PLAN-marine-edna-meta-skill.md`. This
+
+### Input modes (three)
+
+| Mode | Input | Runner | Output |
+|---|---|---|---|
+| **asv** (classic) | 4-col occurrence table \(`scientificName, decimalLatitude, decimalLongitude, eventDate`\) | `pixi run crosscheck <csv> <realm> <marker> <out>` | enriched.parquet + flags |
+| **species** (inverted) | .txt list or .csv with scientificName col | `pixi run species-list <input> <realm> <out> [record_limit]` | species_envelopes.csv \= known GBIF/OBIS extent + FishBase traits (the envelope IS the output) |
+| **coords** (inverted) | .csv with decimalLatitude/decimalLongitude \(+point_id\) | `pixi run coordinates-checklist <csv> <realm> <out> [radius_deg] [max_taxa]` | expected_species.csv \(OBIS checklist realm-flag-filtered + GBIF facets, backbone-resolved\) + env_snapshot.csv + review_queue.csv |
 SKILL.md is a router — it does not contain the QC logic itself. Read this file, then invoke
 `bin/run-crosscheck.sh` (bash-first orchestrator) which chains the 6 sub-skills in a hard order.
 

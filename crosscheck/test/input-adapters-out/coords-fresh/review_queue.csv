@@ -1,0 +1,4 @@
+scientificName,match_status,gbif_candidates,worms_candidates,fishbase_candidates,chosen,decision_reason
+Diptera,unresolved,[],[],[],,
+Phoridae,ambiguous,"[{""usageKey"": 1, ""scientificName"": ""Animalia"", ""matchType"": ""HIGHERRANK"", ""confidence"": 92}]",[],[],,
+Sciaridae,ambiguous,"[{""usageKey"": 3525, ""scientificName"": ""Sciaridae"", ""matchType"": ""HIGHERRANK"", ""confidence"": 92}]",[],[],,
