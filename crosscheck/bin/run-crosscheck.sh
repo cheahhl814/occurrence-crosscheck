@@ -22,7 +22,9 @@ ROUTING_JSON="$WORK_DIR/routing.json"
 NAMES_FILE="$WORK_DIR/names.txt"
 
 echo "== preflight =="
-python3 "$SKILL_DIR/preflight/preflight.py" "$INPUT_CSV" "$REALM" "$MARKER" "$PARAMS_JSON"
+python3 "$SKILL_DIR/preflight/preflight.py" "$INPUT_CSV" "$REALM" "$MARKER" "$PARAMS_JSON" ${CROSSCHECK_BUFFER:-}
+# ^ user-defined buffer zone: export CROSSCHECK_BUFFER="minLon minLat maxLon maxLat"
+#   to bypass the auto-derived extent (which pads the input extent by 0.25 deg)
 
 echo "== realm-router =="
 python3 "$SKILL_DIR/realm-router/realm_router.py" "$PARAMS_JSON" "$ROUTING_JSON"
@@ -52,6 +54,8 @@ python3 - "$INPUT_CSV" "$WORK_DIR/fishbase_pull.json" "$POINTS_CSV" <<'PY'
 import csv, json, sys
 inp, fb_json, out = sys.argv[1], sys.argv[2], sys.argv[3]
 fb = json.loads(open(fb_json).read() or "{}")
+if isinstance(fb, list):  # fishbase_traits emits [] when nothing resolved (shape bug)
+    fb = {d.get("scientificName") or d.get("ScientificName", ""): d for d in fb if isinstance(d, dict)}
 with open(inp) as f:
     rows = list(csv.DictReader(f))
 for r in rows:
