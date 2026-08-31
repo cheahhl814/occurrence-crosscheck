@@ -54,7 +54,13 @@ def load_fishbase(work_dir: Path) -> dict:
     p = work_dir / "fishbase_pull.json"
     if not p.exists():
         return {}
-    return json.loads(p.read_text() or "{}")
+    fb = json.loads(p.read_text() or "{}")
+    if isinstance(fb, list):
+        # fishbase_traits fishbase_pull.R emits [] when nothing resolves (the
+        # 2024K1 battle-test audit caught crosscheck.py crashing on this shape)
+        fb = {d.get("scientificName") or d.get("ScientificName", ""): d
+              for d in fb if isinstance(d, dict)}
+    return fb
 
 
 def load_occurrence_counts(work_dir: Path) -> dict:

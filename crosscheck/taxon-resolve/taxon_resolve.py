@@ -168,8 +168,20 @@ def main() -> None:
 
     review_rows = []
     for name in names:
-        cached = con.execute("SELECT scientificName FROM crosswalk WHERE scientificName=?", (name,)).fetchone()
+        cached = con.execute(
+            "SELECT scientificName, taxon_match_status, gbif_candidates, worms_candidates, fishbase_candidates"
+            " FROM crosswalk WHERE scientificName=?", (name,)
+        ).fetchone()
         if cached:
+            # cache-warm rerun: review-gate rows MUST survive replays (defect caught in
+            # the 2024K1 battle-test audit — reruns used to write a header-only queue,
+            # silently breaking the §11.5 human-review gate)
+            if cached[1] in ("ambiguous", "unresolved"):
+                review_rows.append({
+                    "scientificName": cached[0], "taxon_match_status": cached[1],
+                    "gbif_candidates": cached[2], "worms_candidates": cached[3],
+                    "fishbase_candidates": cached[4],
+                })
             continue
         row = resolve_one(net, name, routing)
         con.execute(
@@ -192,7 +204,7 @@ def main() -> None:
     with open(review_path, "w", newline="") as f:
         w = csv.writer(f)
         w.writerow(["scientificName", "match_status", "gbif_candidates", "worms_candidates", "fishbase_candidates", "chosen", "decision_reason"])
-        for row in review_rows:
+        for row in sorted(review_rows, key=lambda r: r["scientificName"]):
             w.writerow([row["scientificName"], row["taxon_match_status"], row["gbif_candidates"],
                         row["worms_candidates"], row["fishbase_candidates"], "", ""])
 
