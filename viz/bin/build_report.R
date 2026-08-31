@@ -54,6 +54,12 @@ fig06_files <- character(0)
 rds_dir <- file.path(opt$outdir, "work", "plots")
 if (dir.exists(rds_dir)) {
   rds_files <- sort(list.files(rds_dir, pattern = "\\.rds$", full.names = TRUE))
+  # never nest a previous run's assembled overview inside the new one (fig 06
+  # recursive self-inclusion was observed stacking old maps/titles), and only
+  # accept panels whose figure rendered in the current status ledger
+  rds_files <- rds_files[!grepl("06_multispecies_overview", basename(rds_files))]
+  rendered_names <- statuses$figure[statuses$status == "rendered"]
+  rds_files <- rds_files[tolower(sub("\\.rds$", "", basename(rds_files))) %in% tolower(rendered_names)]
   panels <- list(); panel_names <- c()
   for (f in rds_files) {
     obj <- tryCatch(readRDS(f), error = function(e) NULL)
