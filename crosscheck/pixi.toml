@@ -12,6 +12,7 @@ species-list = "bash bin/run_species.sh"
 coordinates-checklist = "bash bin/run_coordinates.sh"
 genus-narrow = "bash bin/run_genus_narrow.sh"
 species-images = "python3 crosscheck/species_images.py"
+habitat-iucn = "python3 crosscheck/habitat_iucn.py"
 update-check = "python3 bin/skill-update-check.py"
 smoke-test = "python3 test/test_smoke.py"
 

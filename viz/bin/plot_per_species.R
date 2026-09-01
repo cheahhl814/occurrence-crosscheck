@@ -47,6 +47,8 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--input-label", type = "character", default = NULL, help = "alias of --label (run_phase compatibility)"),
   make_option("--overlay", type = "character", help = "context_occurrences.csv (GBIF/OBIS backdrop)"),
   make_option("--params", type = "character", help = "crosscheck params.json"),
+  make_option("--habitat", type = "character", default = NULL,
+              help = "habitat_iucn.csv (crosscheck habitat-iucn, §11.11) — subtitle annotation"),
   make_option("--images", type = "character", default = NULL,
               help = "species_images.csv manifest (crosscheck species-images, §11.8) — embeds citable photo + credit"),
   make_option("--counts", type = "character", default = "work/occurrence_counts.json",
@@ -60,7 +62,7 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--max-species", type = "numeric", default = 200)
 )))
 
-for (f in c(opt$input, opt$overlay, opt$params, if (!is.null(opt$images)) opt$images))
+for (f in c(opt$input, opt$overlay, opt$params, if (!is.null(opt$images)) opt$images, if (!is.null(opt$habitat)) opt$habitat))
   if (!file.exists(f)) stop(sprintf("plot_per_species: not found: %s", f), call. = FALSE)
 
 df <- load_input(opt$input)
@@ -71,6 +73,7 @@ df$trait_depth_max_m <- as.numeric(df$trait_depth_max_m)
 
 params <- jsonlite::fromJSON(opt$params)
 counts <- if (file.exists(opt$counts)) jsonlite::fromJSON(opt$counts) else list()
+habitat_m <- load_habitat_manifest(opt$habitat)
 img_manifest <- if (!is.null(opt$images) && file.exists(opt$images)) {
   m <- read.csv(opt$images, stringsAsFactors = FALSE, colClasses = "character")
   m$abs_path <- ifelse(nzchar(m$local_file), file.path(dirname(normalizePath(opt$images)), m$local_file), "")
@@ -126,6 +129,7 @@ for (nm in species) {
   # citable photo (v2.3.0 species_images manifest): embed thumbnail + credit line
   im <- if (!is.null(img_manifest)) img_manifest[img_manifest$scientificName == nm & nzchar(img_manifest$local_file), , drop = FALSE] else NULL
   im_path <- if (!is.null(im) && nrow(im) > 0 && file.exists(im$abs_path)) im$abs_path else NA_character_
+  hn <- habitat_iucn_note(habitat_m, nm)
   photo_credit <- if (!is.null(im) && nrow(im) > 0) sprintf("Photo: %s (%s%s) via %s",
         trunc_credit(if (nzchar(im$creator[1])) im$creator[1] else im$rightsHolder[1]),
         im$license[1],
@@ -191,11 +195,12 @@ for (nm in species) {
         } else NULL
       } else NULL } +
     labs(title = nm,
-         subtitle = sprintf(
+         subtitle = paste(c(sprintf(
            "%s: %s — %s GBIF · %s OBIS records in the %s km buffer · %s%s",
            opt_label, verdict,
            format(gb, big.mark = ","), format(ob, big.mark = ","),
            format(buffer_km, big.mark = ","), det_note, depth_note),
+           if (nzchar(hn)) paste0("\n", hn) else NULL), collapse = ""),
          x = "Longitude", y = "Latitude",
          caption = paste(c(
              sprintf("pink diamond = eDNA detection site · grey = GBIF/OBIS known occurrences · dashed ring = %s km buffer · %s",

@@ -31,6 +31,8 @@ script_dir <- dirname(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), v
 source(file.path(script_dir, "lib_viz.R"))
 
 option_list <- list(
+  make_option("--habitat", type = "character", default = NULL,
+              help = "habitat_iucn.csv (§11.11) — candidate habitat + IUCN in subtitle"),
   make_option("--candidates", type = "character", help = "genus_candidates.csv (required)"),
   make_option("--input", type = "character", default = NULL, help = "enriched.parquet (for site coords); optional if --site-lat/--site-lon given"),
   make_option("--site-lat", type = "double", default = NULL),
@@ -48,9 +50,9 @@ option_list <- list(
   make_option("--config", type = "character", default = NULL, help = "run config (run_phase compat)")
 )
 opt <- parse_args(OptionParser(option_list = option_list))
-for (f in c(opt$candidates, opt$overlay, opt[["candidates-context"]], if (!is.null(opt$input)) opt$input))
+for (f in c(opt$candidates, opt$overlay, opt[["candidates-context"]], if (!is.null(opt$habitat)) opt$habitat, if (!is.null(opt$input)) opt$input))
   if (!file.exists(f)) stop(sprintf("plot_genus_candidates: not found: %s", f), call. = FALSE)
-
+habitat_m <- load_habitat_manifest(opt$habitat)
 # ---- detection site (single-site assumption, mirrors per-species maps) -------
 if (!is.null(opt[["site-lat"]]) && !is.null(opt[["site-lon"]])) {
   site_lat <- opt[["site-lat"]]; site_lon <- opt[["site-lon"]]
@@ -146,6 +148,7 @@ for (g in sort(genera)) {
       plaus <- "WEAK"; col_pl <- "#e67e22"
     }
     near_note <- if (nrow(ctx) > 0) sprintf("nearest known record %.0f km from site", near) else "no context records"
+    hn <- habitat_iucn_note(habitat_m, strip_authors(sp_name))
     ex <- c(min(ring$decimalLongitude), min(ring$decimalLatitude),
             max(ring$decimalLongitude), max(ring$decimalLatitude))
 
@@ -161,10 +164,12 @@ for (g in sort(genera)) {
                  colour = "grey20", size = 3.6, stroke = 0.9) +
       coord_sf(xlim = ex[c(1, 3)], ylim = ex[c(2, 4)], expand = FALSE) +
       labs(title = sprintf("%s \u2014 candidate %d of %d: %s", g, r$rank, n_cand, sp_name),
-           subtitle = sprintf(
-             "GENUS-LEVEL HYPOTHESIS, not a species identification \u00b7 %s \u2014 %s GBIF \u00b7 %s OBIS records in the %s km buffer \u00b7 %s",
+           subtitle = paste(c(sprintf(
+             "GENUS-LEVEL HYPOTHESIS, not a species identification · %s — %s GBIF · %s OBIS records in the %s km buffer · %s",
              plaus, format(n_gb, big.mark = ","), format(n_ob, big.mark = ","),
              format(buffer_km, big.mark = ","), near_note),
+             if (nzchar(hn)) paste0("\n", hn) else NULL),
+             collapse = ""),
            x = "Longitude", y = "Latitude",
            caption = sprintf("hollow diamond = detection site (candidate) \u00b7 grey = candidate species' GBIF/OBIS occurrences \u00b7 dashed ring = %s km buffer \u00b7 %s",
                              format(buffer_km, big.mark = ","), opt_label)) +

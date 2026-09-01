@@ -211,3 +211,38 @@ figure_status <- function(outdir, figure, status, reason = "", file_path = "", e
   cat(line, "\n", sep = "", file = file.path(outdir, "work", "figure_status.jsonl"), append = TRUE)
   invisible(TRUE)
 }
+
+# ---- v2.5.0 / v1.6.0: habitat + IUCN render helpers (§11.11) ------------------
+IUCN_TILE_COL <- c(
+  "LC" = "#1a7a3a", "NT" = "#7fa845", "VU" = "#d98e04", "EN" = "#d14444",
+  "CR" = "#8e2a2a", "EX" = "#111111", "EW" = "#444444",
+  "DD" = "#777777", "NE" = "#9aa7b0", EMPTY = "#9aa7b0")
+IUCN_LABEL <- c(LC = "LC Least Concern", NT = "NT Near Threatened", VU = "VU Vulnerable",
+                EN = "EN Endangered", CR = "CR Critically Endangered",
+                EX = "EX Extinct", EW = "EW Extinct in the Wild",
+                DD = "DD Data Deficient", NE = "NE Not Evaluated")
+
+load_habitat_manifest <- function(path) {
+  if (is.null(path) || !nzchar(path) || !file.exists(path)) return(NULL)
+  m <- read.csv(path, stringsAsFactors = FALSE, colClasses = "character")
+  m
+}
+
+# single-line habitat+iucn annotation for one taxon; NA-safe
+habitat_iucn_note <- function(m, name) {
+  if (is.null(m)) return("")
+  r <- m[m$scientificName == name, , drop = FALSE]
+  if (nrow(r) == 0) return("")
+  hab <- if (nzchar(r$habitat[1]) && !grepl("^flag:", r$habitat[1]))
+    sprintf("habitat %s", gsub("/", " / ", r$habitat[1])) else ""
+  iucn <- if (nzchar(r$iucn_category[1]) && !grepl("^flag:", r$iucn_category[1]))
+    sprintf("IUCN %s", r$iucn_category[1]) else ""
+  paste(c(hab, iucn), collapse = " \u00b7 ")
+}
+
+iucn_col_for <- function(m, name) {
+  if (is.null(m)) return("#9aa7b0")
+  r <- m[m$scientificName == name, , drop = FALSE]
+  if (nrow(r) == 0 || !r$iucn_code[1] %in% names(IUCN_TILE_COL)) return("#9aa7b0")
+  IUCN_TILE_COL[[r$iucn_code[1]]]
+}

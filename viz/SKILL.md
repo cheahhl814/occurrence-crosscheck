@@ -174,3 +174,11 @@ layer (no CONCORDANT/DISCORDANT words, no ledger verdict counts, separate
   **08_genus_candidates_sheet** (bin/plot_contact_sheet.R): photos labelled
   "candidate of <genus>, rank n" — hypotheses for the review queue, NOT species
   identifications.
+
+## v1.6.0 — habitat + IUCN annotations (`--habitat`)
+
+`--habitat <habitat_iucn.csv>` (crosscheck habitat-iucn, PLAN §11.11) annotates every view:
+- **per-species maps + candidate panels**: second subtitle line "habitat marine / brackish · IUCN Least Concern"
+- **fig 07 + 08 contact sheets**: IUCN-colour-coded status line per tile (LC #1a7a3a -> CR #8e2a2a; NE/DD grey),
+  bolded above the license line
+Helpers live in bin/lib_viz.R (`habitat_iucn_note`, `iucn_col_for`, `IUCN_TILE_COL`).

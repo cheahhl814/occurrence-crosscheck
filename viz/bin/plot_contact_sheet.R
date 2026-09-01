@@ -27,6 +27,8 @@ option_list <- list(
               help = "candidate_images.csv (§11.10) -> also renders fig/08_genus_candidates_sheet"),
   make_option("--outdir", type = "character", help = "viz output dir"),
   make_option("--config", type = "character", default = NULL, help = "run config (run_phase compat)"),
+  make_option("--habitat", type = "character", default = NULL,
+              help = "habitat_iucn.csv (§11.11) — IUCN-colored status line on tiles"),
   make_option("--input-label", type = "character", default = NULL, help = "run label"),
   make_option("--cols", type = "integer", default = 4L, help = "grid columns (default 4)")
 )
@@ -61,6 +63,7 @@ render_sheet <- function(manifest_file, prefix, title_txt, is_candidate = FALSE)
     if (nm %in% names(df)) { v <- df[[nm]]; v[is.na(v)] <- default; v } else rep(default, nrow(df))
   }
   img_col  <- get_col(rows, "local_file")
+  habitat_m <- load_habitat_manifest(opt$habitat)
   flag_col <- get_col(rows, "flag")
   lic_col  <- get_col(rows, "license")
   cred_col <- get_col(rows, "attribution")
@@ -104,8 +107,10 @@ render_sheet <- function(manifest_file, prefix, title_txt, is_candidate = FALSE)
         text(0.5, 0.5, if (nzchar(fl)) lookup(NICE, fl, fl) else "no image", cex = 0.62, col = "#8e44ad")
       }
       lic_line <- if (nzchar(lic_col[i])) lic_col[i] else if (nzchar(fl)) lookup(NICE, fl, fl) else "-"
-      text(0.5, 0.105, labels = trunc(cred_col[i]), cex = 0.42, col = "#555555")
-      text(0.5, 0.04,  labels = lic_line, cex = 0.46, col = tile_col)
+      hin <- habitat_iucn_note(habitat_m, rows$scientificName[i])
+      if (nzchar(hin)) text(0.5, 0.105, labels = trunc(hin, 44), cex = 0.42,
+                            col = iucn_col_for(habitat_m, rows$scientificName[i]), font = 2)
+      text(0.5, 0.04,  labels = lic_line, cex = 0.42, col = tile_col)
       text(0.97, 0.93, labels = src_col[i], cex = 0.40, col = "#999999", adj = 1)
     }
     n_img <- sum(nzchar(img_col)); n_flag <- sum(grepl("^flag", flag_col))

@@ -28,6 +28,8 @@ option_list <- list(
               help = "genus_candidates.csv -> quarantined candidate-panel maps (species_maps/genus_candidates/)"),
   make_option("--candidate-images", type = "character", default = NULL,
               help = "candidate_images.csv -> genus-candidate contact sheet (fig 08)"),
+  make_option("--habitat", type = "character", default = NULL,
+              help = "habitat_iucn.csv -> IUCN+habitat annotations on maps + sheets"),
   make_option("--candidates-context", type = "character", default = NULL,
               help = "candidates_context_occurrences.csv -> honest plausibility for candidate panels"),
   make_option("--images", type = "character", default = NULL,
@@ -133,6 +135,7 @@ for (ph in phases) {
     if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
     if (!is.null(opt$counts)) extra <- c(extra, "--counts", opt$counts)
     if (!is.null(opt$images)) extra <- c(extra, "--images", opt$images)
+    if (!is.null(opt$habitat)) extra <- c(extra, "--habitat", opt$habitat)
   }
   if (ph == "genuscandidates") {
     extra <- c("--candidates", opt[["genus-candidates"]],
@@ -141,12 +144,14 @@ for (ph in phases) {
                "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
     if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
     if (!is.null(opt[["candidates-context"]])) extra <- c(extra, "--candidates-context", opt[["candidates-context"]])
+    if (!is.null(opt$habitat)) extra <- c(extra, "--habitat", opt$habitat)
     if (!is.null(opt$params)) extra <- c(extra, "--params", opt$params)
   }
   if (ph == "contactsheet") {
     extra <- c("--images", opt$images,
                "--input-label", if (!is.null(opt$`input-label`)) opt$`input-label` else "species reference images",
-               if (!is.null(opt[["candidate-images"]])) c("--candidate-images", opt[["candidate-images"]]) else character(0))
+               if (!is.null(opt[["candidate-images"]])) c("--candidate-images", opt[["candidate-images"]]) else character(0),
+               if (!is.null(opt$habitat)) c("--habitat", opt$habitat) else character(0))
   }
   ok <- run_phase(ph, script, extra) && ok
 }
