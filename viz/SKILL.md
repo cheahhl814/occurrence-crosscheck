@@ -232,4 +232,7 @@ GBIF-only capped candidates fetch had missed it).
   cards fill their 2-column width — no more dead space at the right.
 - IUCN bar chart: per-category colours in severity order (EX/EW dark -> CR #8e2a2a -> EN orange ->
   VU yellow -> NT lime -> LC green -> DD grey -> NE light grey), keyed by full category name AND code.
+- Report v2.0.2: the plotly occurrence-map container is aspect-fitted to the geo frame
+  (lon-span × cos(midLat) / lat-span, clamped 0.75–2.0) and centered with a max-width cap —
+  the map fills its container instead of leaving a huge dead band on the right of the wide card.
 
