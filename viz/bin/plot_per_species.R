@@ -50,7 +50,7 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--habitat", type = "character", default = NULL,
               help = "habitat_iucn.csv (crosscheck habitat-iucn, §11.11) — subtitle annotation"),
   make_option("--images", type = "character", default = NULL,
-              help = "species_images.csv manifest (crosscheck species-images, §11.8) — embeds citable photo + credit"),
+              help = "ACCEPTED BUT IGNORED since v1.8.1 — photo inset removed from maps (redundant; covered map regions). Photos live in the report's Species images tab and fig 07 contact sheet."),
   make_option("--counts", type = "character", default = "work/occurrence_counts.json",
               help = "occurrence_counts.json from the crosscheck run"),
   make_option("--outdir", type = "character", default = "species_maps"),
@@ -74,12 +74,6 @@ df$trait_depth_max_m <- as.numeric(df$trait_depth_max_m)
 params <- jsonlite::fromJSON(opt$params)
 counts <- if (file.exists(opt$counts)) jsonlite::fromJSON(opt$counts) else list()
 habitat_m <- load_habitat_manifest(opt$habitat)
-img_manifest <- if (!is.null(opt$images) && file.exists(opt$images)) {
-  m <- read.csv(opt$images, stringsAsFactors = FALSE, colClasses = "character")
-  m$abs_path <- ifelse(nzchar(m$local_file), file.path(dirname(normalizePath(opt$images)), m$local_file), "")
-  m
-} else NULL
-
 opt_label <- if (!is.null(opt$label)) opt$label else if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections"
 buffer_km <- if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else {
   b <- params$buffer; if (!is.null(b) && !is.null(b$km) && !is.na(b$km)) b$km else 2000
@@ -126,15 +120,10 @@ n_ok <- 0
 
 for (nm in species) {
   det <- df[df$scientificName == nm & !is.na(df$decimalLatitude), , drop = FALSE]
-  # citable photo (v2.3.0 species_images manifest): embed thumbnail + credit line
-  im <- if (!is.null(img_manifest)) img_manifest[img_manifest$scientificName == nm & nzchar(img_manifest$local_file), , drop = FALSE] else NULL
-  im_path <- if (!is.null(im) && nrow(im) > 0 && file.exists(im$abs_path)) im$abs_path else NA_character_
+  # v1.8.1: photo inset REMOVED from map images (redundant with the report's Species
+  # images tab and it covered map regions); --images still accepted for viz_run compat
+  # but the manifest is no longer read here.
   hn <- habitat_iucn_note(habitat_m, nm)
-  photo_credit <- if (!is.null(im) && nrow(im) > 0) sprintf("Photo: %s (%s%s) via %s",
-        trunc_credit(if (nzchar(im$creator[1])) im$creator[1] else im$rightsHolder[1]),
-        im$license[1],
-        if (nzchar(im$flag[1]) && im$flag[1] == "by-nc") ", license terms apply" else "",
-        im$source[1]) else if (!is.null(im) && nrow(im) > 0) sprintf("No citable photo (%s)", im$flag[1]) else ""
   ctx <- ctx_all[ctx_all$key == binom_key(nm), , drop = FALSE]
   # v2.5.1 merged-ring semantics: ONE ring = map ring = concordance threshold.
   # ctx rows are classified by haversine distance to the site: within ring = in-ring
@@ -213,18 +202,6 @@ for (nm in species) {
     geom_point(data = det, aes(x = decimalLongitude, y = decimalLatitude),
                shape = 23, fill = col_det, colour = "black", size = 3.4, stroke = 0.5) +
     coord_sf(xlim = ex[c(1, 3)], ylim = ex[c(2, 4)], expand = FALSE) +
-    { if (!is.na(im_path)) {
-        img <- try(jpeg::readJPEG(im_path), silent = TRUE)
-        if (!inherits(img, "try-error")) {
-          d <- dim(img); step <- max(1L, min(as.integer(d[1] / 220), as.integer(d[2] / 220)) + 1L)
-          small <- img[seq(1L, d[1], by = step), seq(1L, d[2], by = step), , drop = FALSE]
-          xr <- diff(range(ex[1], ex[3])); yr <- diff(range(ex[2], ex[4]))
-          side <- min(xr, yr) * 0.17
-          x0 <- ex[3] - xr * 0.015 - side; y1 <- ex[4] - yr * 0.015; y0 <- y1 - side * (d[1]/d[2]) * (step^0)
-          annotation_custom(grid::rasterGrob(as.raster(small), interpolate = TRUE),
-                            xmin = x0, xmax = x0 + side, ymin = y0, ymax = y1)
-        } else NULL
-      } else NULL } +
     labs(title = nm,
          subtitle = paste(c(sprintf(
            "%s: %s — %s GBIF · %s OBIS records within the %s km ring · %s%s",
@@ -236,8 +213,7 @@ for (nm in species) {
          x = "Longitude", y = "Latitude",
          caption = paste(c(
              sprintf("pink diamond = eDNA detection site · grey = occurrences within the %s km ring · pale = beyond the ring · dashed ring = concordance threshold · %s",
-                     format(ring_km, big.mark = ","), opt_label),
-             if (nzchar(photo_credit)) photo_credit else NULL), collapse = " · ")) +
+                     format(ring_km, big.mark = ","), opt_label)), collapse = " · ")) +
     theme_bw(base_size = 10) +
     theme(panel.grid = element_line(colour = "grey92", linewidth = 0.25),
           plot.title = element_text(face = "italic", size = 12),

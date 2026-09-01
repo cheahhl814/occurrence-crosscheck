@@ -427,8 +427,9 @@ const REPORT_DATA = {{ data_json | safe }};
   // ---------- hand-rolled inline SVG charts ----------
   function svg(w,h){
     const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
-    s.setAttribute("width", w); s.setAttribute("height", h);
+    // responsive: charts scale to card width (viewBox), never overflow, centered
     s.setAttribute("viewBox", "0 0 "+w+" "+h);
+    s.style.cssText = "width:100%; height:auto; display:block; margin:0 auto; max-width:"+Math.round(w*1.6)+"px";
     return s;
   }
   function svgEl(tag, attrs){
@@ -441,7 +442,7 @@ const REPORT_DATA = {{ data_json | safe }};
     const target = document.getElementById(targetId);
     const entries = Object.entries(hist).filter(([,v])=>v>0);
     const total = entries.reduce((s,[,v])=>s+v,0);
-    const size = 160, r = 58, cx = 80, cy = 80, sw = 26;
+    const size = 240, r = 88, cx = 120, cy = 120, sw = 34;
     const s = svg(size, size);
     let acc = 0;
     const circumf = 2*Math.PI*r;
@@ -475,13 +476,14 @@ const REPORT_DATA = {{ data_json | safe }};
     const target = document.getElementById(targetId);
     const keys = order || Object.keys(hist);
     const max = Math.max(1, ...keys.map(k=>hist[k]||0));
-    const rowH = 26, w = 280;
+    const rowH = 30, w = 460;
     const s = svg(w, rowH*keys.length+4);
     keys.forEach((k,i)=>{
       const v = hist[k]||0;
       const bw = (v/max) * (w-100);
       s.appendChild(svgEl("rect", {x:0, y:i*rowH+3, width:bw, height:16, fill: (colorMap&&colorMap[k])||"var(--accent)", rx:3}));
-      const label = svgEl("text", {x:w-94, y:i*rowH+16, "font-size":12.5, fill:"currentColor"});
+      const label = svgEl("text", {x:w-8, y:i*rowH+19, "font-size":14, fill:"currentColor"});
+      label.setAttribute("text-anchor", "end");
       label.textContent = k+" ("+v+")";
       s.appendChild(label);
     });
@@ -490,7 +492,22 @@ const REPORT_DATA = {{ data_json | safe }};
 
   donut("chart-verdicts", D.counts.species_verdicts, {CONCORDANT:"#1f8a53", DISCORDANT:"#c1462b", NO_RECORD:"#6b7280"});
   donut("chart-plausibility", D.counts.candidate_plausibility, {SUPPORTED:"#1f8a53", WEAK:"#b3720a", NO_RECORD:"#6b7280"});
-  hbar("chart-iucn", D.counts.iucn_hist, {}, Object.keys(D.counts.iucn_hist).sort());
+  // IUCN per-category colours (mirrors lib_viz IUCN_TILE_COL; keyed by full category name + code)
+  const IUCN_COLORS = {"Least Concern":"#1a7a3a", LC:"#1a7a3a",
+                       "Near Threatened":"#7fa83c", NT:"#7fa83c",
+                       "Vulnerable":"#d8b310", VU:"#d8b310",
+                       "Endangered":"#d2691e", EN:"#d2691e",
+                       "Critically Endangered":"#8e2a2a", CR:"#8e2a2a",
+                       "Extinct":"#1b1b1b", EX:"#1b1b1b",
+                       "Extinct in the Wild":"#3a3a3a", EW:"#3a3a3a",
+                       "Data Deficient":"#9aa7b0", DD:"#9aa7b0",
+                       "Not Evaluated":"#c9ced4", NE:"#c9ced4"};
+  const IUCN_ORDER = ["Extinct","Extinct in the Wild","Critically Endangered","Endangered","Vulnerable",
+                      "Near Threatened","Least Concern","Data Deficient","Not Evaluated",
+                      "EX","EW","CR","EN","VU","NT","LC","DD","NE"];
+  hbar("chart-iucn", D.counts.iucn_hist, IUCN_COLORS,
+       IUCN_ORDER.filter(k=>D.counts.iucn_hist[k])
+                 .concat(Object.keys(D.counts.iucn_hist).filter(k=>IUCN_ORDER.indexOf(k)<0)));
   hbar("chart-habitat", D.counts.habitat_hist, {marine:"#4a7fb5", brackish:"#2a9d8f", freshwater:"#7fb0ea", terrestrial:"#b3720a"},
        ["marine","brackish","freshwater","terrestrial"]);
 

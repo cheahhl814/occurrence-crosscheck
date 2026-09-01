@@ -221,3 +221,15 @@ moved to the top of the Species Maps tab. 2024K1: 48 species (18/27/3 — unchan
 45 SUPPORTED / 1 WEAK (fuller OBIS context after refetch; Alepes vari genuinely 39 km — the old
 GBIF-only capped candidates fetch had missed it).
 
+## v1.8.1 — map inset removal + overview chart polish (report v2.0.1)
+
+- plot_per_species.R: the citable-photo inset (top-right rasterGrob) is REMOVED from map images —
+  redundant with the report's Species images tab and it covered map regions. `--images` is still
+  accepted (viz_run compatibility) but ignored; photos + attribution live on in the report cards and
+  fig 07 contact sheet (unchanged).
+- Report Overview: all four chart cards (Species verdicts, Candidate plausibility, IUCN, Habitat mix)
+  now render responsive SVGs (viewBox + width:100%, larger canvases: donut 240px, bars 460px) so the
+  cards fill their 2-column width — no more dead space at the right.
+- IUCN bar chart: per-category colours in severity order (EX/EW dark -> CR #8e2a2a -> EN orange ->
+  VU yellow -> NT lime -> LC green -> DD grey -> NE light grey), keyed by full category name AND code.
+
