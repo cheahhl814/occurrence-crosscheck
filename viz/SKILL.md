@@ -1,8 +1,8 @@
 ---
 name: occurrence-viz
 description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware publication-quality visualization of DwC-shaped occurrence tables — species occurrence maps (rnaturalearth + geocurate fallback pattern with fixed-seed point subsampling), realm-routed environmental profiles (marine → depth profiles; freshwater/terrestrial → elevation/bioclim profiles via the SAME plotting code with the x-axis variable from run config), per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Renderer PINNED to R (ggplot2 + sf + rnaturalearth; arrow for parquet). Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
-version: 1.0.0
-updated: "2026-08-31"
+version: 1.0.1
+updated: "2026-09-01"
 triggers:
   - "occurrence visualization"
   - "species occurrence map"
@@ -49,6 +49,34 @@ optional (figures render only when columns exist):
 Any parquet/CSV/TSV meeting the minimal contract works: **plain `obis-gbif-fetch` output** (maps render immediately — env/trait figures skip with a logged reason) **or** `edna-crosscheck` `enriched.parquet` (full figure set when columns are populated).
 
 **This skill never flags.** `ENVELOPE_VIOLATION` / `OUT_OF_RANGE` / `ON_LAND` flags are edna-crosscheck's job; viz draws observations so a human can judge flags.
+
+## 0.5 Ask-User Stop Points (runtime parameters)
+
+> **SP-11 (echo) — Concordance ring R (`--near-km`).** Evidence: the report generator hard-fails
+> (exit 2) if this run's ring does not equal the crosscheck run's ring — the merged-ring semantics
+> (crosscheck/SKILL.md v2.5.1) require map ring = concordance threshold across both skills.
+> This is confirm-not-choose: echo the ring already pinned by crosscheck's SP-11 (crosscheck/SKILL.md
+> §0.5), don't re-derive it here.
+> Auto-pick condition: never — always read and echo the upstream `params.json`/`crosscheck_report.json`
+> ring value; a mismatch must fail loudly (exit 2), not silently drift. SP-10's buffer-scale backstop
+> (`preflight.py --require-confirm`, crosscheck/SKILL.md §0.5) is the upstream companion check — a
+> tight auto buffer on the crosscheck side produces the same false-DISCORDANT pattern this ring echo
+> is meant to keep visible on the map.
+
+> **SP-15 — Context-fetch budget (`context_records --buffer-km 500 --per-species 200 --outside-cap`).**
+> Evidence: default budget (500 km / 200 records-per-species) covers the typical single-run taxa
+> count without excessive fetch time. Recommend: keep defaults for runs under ~100 taxa. Confirm or
+> pick one of: A) defaults (`--buffer-km 500 --per-species 200`) B) lean outside-cap
+> (`--outside-cap 100`) C) heavy (`--outside-cap 1000`) for exhaustive context maps.
+> Auto-pick condition: auto-pick A (defaults) when taxa count < 100; ask when the run has >=100 taxa,
+> since the fetch cost and map density both scale with taxa count at that point.
+
+> **SP-16 — Genus-narrow cutoffs (`--buffer-km 100`, `max_sp 40`).** Evidence: the default candidate
+> cap (40 species per genus) is generous enough that most genera never hit it. Recommend: keep
+> defaults. Confirm or pick one of: A) raise the cap B) accept with a truncation flag noted in the
+> report.
+> Auto-pick condition: auto-pick defaults; ask only when a genus actually hits the `max_sp` cap during
+> the run (truncation would otherwise happen silently).
 
 ## Pipeline — 4 sub-skills (phase detection: state of the run's `outdir/`)
 
@@ -235,4 +263,11 @@ GBIF-only capped candidates fetch had missed it).
 - Report v2.0.2: the plotly occurrence-map container is aspect-fitted to the geo frame
   (lon-span × cos(midLat) / lat-span, clamped 0.75–2.0) and centered with a max-width cap —
   the map fills its container instead of leaving a huge dead band on the right of the wide card.
+
+## v1.0.1 — runtime ask-user stop points (§0.5)
+
+Added a "0.5 Ask-User Stop Points (runtime parameters)" section: SP-11 echoes crosscheck's
+concordance-ring pin (confirm-not-choose, since the report generator hard-fails exit 2 on a
+ring mismatch), SP-15 covers the `context_records` context-fetch budget, and SP-16 covers
+genus-narrow candidate cutoffs. Each carries an explicit auto-pick condition.
 

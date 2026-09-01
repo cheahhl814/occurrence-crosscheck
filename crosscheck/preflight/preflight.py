@@ -54,6 +54,10 @@ def main() -> None:
     ap.add_argument("--bbox", nargs=4, type=float, metavar=("MINLON", "MINLAT", "MAXLON", "MAXLAT"))
     ap.add_argument("--buffer-km", type=float, default=None)
     ap.add_argument("--buffer-deg", type=float, default=None)
+    ap.add_argument("--require-confirm", action="store_true",
+                     help="SP-10 backstop: fail (exit 1) instead of WARN when the buffer resolves "
+                          "to auto mode on a degenerate input extent, forcing an explicit "
+                          "--buffer-km/--buffer-deg/--bbox declaration.")
     args = ap.parse_args()
 
     n_bbox_opt = sum(x is not None for x in (args.bbox, args.buffer_km, args.buffer_deg))
@@ -95,12 +99,20 @@ def main() -> None:
         buffer = {"mode": "auto", "km": None, "pad_deg": pad}
         extent_span = max(extent[2] - extent[0], extent[3] - extent[1])
         if extent_span < 0.05:  # degenerate extent: single site / near-identical points
+            if args.require_confirm:
+                print("preflight: FAIL auto buffer on degenerate extent requires user "
+                      "confirmation (SP-10); declare --buffer-km/--buffer-deg/--bbox or rerun "
+                      "with the confirmation token", file=sys.stderr)
+                sys.exit(1)
             print("preflight: WARNING auto buffer (0.25 deg) on a degenerate input extent "
                   f"(span {extent_span:.4f} deg) — a single-site eDNA survey should declare a "
                   "regional-scale buffer, e.g. --buffer-km 50..2000. A tight buffer makes every "
                   "species look discordant when occurrence databases are locally sparse "
                   "(battle-tested 2026-08-31 on 2024K1: 39/48 false discordance at 0.25 deg, "
                   "resolved at regional scale).", file=sys.stderr)
+
+    if args.require_confirm and buffer["mode"] != "auto":
+        print(f"preflight: SP-10 confirmed (buffer={buffer['mode']})")
 
     params = {
         "skill_run": "edna-crosscheck",

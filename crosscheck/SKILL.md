@@ -1,8 +1,8 @@
 ---
 name: edna-crosscheck
 description: 'Cross-checks eDNA occurrence observations (from nf-edna/nf-edna-nanopore ASV tables) against GBIF/OBIS/WoRMS/FishBase taxonomic backbones and Bio-ORACLE/WorldClim-CHELSA environmental envelopes, realm-aware (marine/freshwater/terrestrial). Phase 1 of a 3-skill eDNA meta-stack (PLAN-marine-edna-meta-skill.md). Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv — flags, never silently drops records. Use when the user asks to "cross-check eDNA results", "validate ASV table against GBIF/OBIS", "QC eDNA occurrences", or "ground-truth eDNA detections".'
-version: 1.0.0
-updated: "2026-08-31"
+version: 1.0.1
+updated: "2026-09-01"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -65,6 +65,39 @@ three skills)
 | `flagged_occurrences.tsv` | §11.4 |
 | `review_queue.csv` | §11.5 |
 
+## 0.5 Ask-User Stop Points (runtime parameters)
+
+> **SP-10 — Buffer scale.** Evidence: single-site degenerate extent + auto 0.25-deg buffer produced
+> 39/48 false-DISCORDANT verdicts in the 2026-08-31 battle test (defect D1); `preflight.py` already
+> WARNs on this combo but proceeds. Recommend: regional `--buffer-km` (100 km estuary/coastal,
+> 2000 km regional biogeographic). Auto-pick only when input extent spans multiple distinct sites.
+> Confirm or pick one of: A) `--buffer-km 100` B) `--buffer-km 2000` C) explicit `--bbox`.
+> Auto-pick condition: proceeds unasked only when the input extent already spans multiple distinct
+> sites (non-degenerate); for a degenerate single-site extent, ask before proceeding. Backstop: run
+> `preflight.py --require-confirm` to turn the WARN into a hard FAIL (exit 1) on auto+degenerate,
+> so an unattended run cannot silently inherit the tight default — see preflight/SKILL.md.
+
+> **SP-11 — Concordance ring R (`--near-km`, default 100 in viz).** Evidence: merged-ring semantics
+> (SKILL.md v2.5.1 notes) make R both the map ring and the verdict threshold; the 2024K1 battle test
+> used 150. Recommend: 150 for regional marine surveys. Confirm or pick one of: A) 50 (high-res
+> coastal) B) 150 (regional marine) C) custom.
+> Auto-pick condition: never silently auto-pick; if the user already endorsed a project-level R,
+> apply it and log the source instead of re-asking.
+
+> **SP-12 — Detection-site coordinate provenance.** Evidence: 2024K1 inputs all share one placeholder
+> centroid (2.9857056, 101.2587923) because per-sample coords were absent. Recommend: confirm the
+> placeholder is acceptable or supply real per-sample coordinates. Confirm or pick one of:
+> A) confirm centroid B) supply real coords C) abort for re-export.
+> Auto-pick condition: never for single-point inputs — ask whenever all input rows share one
+> coordinate; a wrong site shifts every distance verdict.
+
+> **SP-13 — Realm routing when taxa span realms.** Evidence: mixed-taxa inputs occasionally resolve
+> partly outside the declared realm. Recommend: trust the declared realm when the vast majority of
+> taxa clearly belong to it. Confirm or pick one of: A) keep declared realm, flag minority taxa
+> B) ask which realm governs OBIS/WoRMS marine-only gating for the minority taxa.
+> Auto-pick condition: auto-pick A when >=95% of detected taxa clearly resolve to the declared
+> realm; otherwise ask.
+
 ## Network scope (read-only, no publishing)
 
 GET-only calls to GBIF (`api.gbif.org`), OBIS (`api.obis.org`, marine realm only), WoRMS
@@ -123,4 +156,12 @@ default 150 km). The old separate fetch-buffer is now an internal data-collectio
 tokens, mirroring species_images.load_candidates), accepts `scientificName` for compat, and
 maps `genus`/`rank` with `candidate_of`/`candidate_rank` fallbacks. Battle-test rebuild went
 48 → 101 manifest taxa after the fix.
+
+## v2.5.3 — runtime ask-user stop points SP-10..SP-13 (§0.5)
+
+Added a "0.5 Ask-User Stop Points (runtime parameters)" section documenting the four runtime
+(as opposed to design-time) confirmation points an agent must resolve on each run: buffer scale
+(SP-10, now backstopped by `preflight.py --require-confirm`), concordance ring R (SP-11), detection-
+site coordinate provenance (SP-12), and realm routing for mixed-taxa inputs (SP-13). Each carries an
+explicit auto-pick condition so unattended runs know exactly when they may proceed without asking.
 

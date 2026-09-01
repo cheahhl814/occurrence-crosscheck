@@ -1,8 +1,8 @@
 ---
 name: occurrence-publish
 description: 'Phase 3 of the marine-eDNA meta-skill stack: publish validated eDNA occurrences to GBIF and (marine-only) OBIS. Consumes enriched.parquet + flagged_occurrences.tsv (with explicit human sign-off) + run manifest from edna-crosscheck, enforces three hard gates (pending-record sign-off block, OBIS marine-realm gate, WoRMS LSID requirement), builds Darwin Core Archives with a plain-Python writer (stdlib zip + hand-built meta.xml + EML 2.0; no eDNAbridge dependency), produces GBIF occurrence-core archives and OBIS Event-Core archives (survey/cruise → station → sample → sequencing event + occurrence + DNA-derived data + eMoF/OBIS-ENV-DATA), and validates via the GBIF Data Validator API (with documented offline structural fallback) plus local OBIS structural checks. No live IPT/OBIS publishing in v1 — emits ready-to-run publish commands. Sub-skills: preflight (input + signoff gate), gbif-publish, obis-publish, validate. Triggers: "publish eDNA to GBIF/OBIS", "DwC-A publish", "publish occurrence data", "OBIS Event Core", "DNA derived data", "sign off flagged occurrences".'
-version: 1.0.0
-updated: "2026-08-31"
+version: 1.0.1
+updated: "2026-09-01"
 triggers:
   - "publish eDNA occurrences"
   - "publish to GBIF"
@@ -23,6 +23,17 @@ triggers:
 > **plain-Python DwC-A writer** (stdlib `zipfile` + hand-built `meta.xml` + EML 2.0 XML — no
 > eDNAbridge dependency), validates them, and emits ready-to-run publish commands.
 > **No live IPT/OBIS publishing calls in v1.**
+
+## 0.5 Ask-User Stop Points (runtime parameters)
+
+> **SP-17 — Image license policy.** Evidence: the `species_images` manifest allows CC-BY-NC images
+> for internal reports, while `flag-no-license` rows are always publish-excluded regardless of
+> distribution scope. Recommend: "internal: by-nc allowed with attribution" as the default.
+> Confirm or pick one of: A) cc-best only (drop all by-nc rows) B) include by-nc with attribution.
+> Auto-pick condition: auto-pick B (internal default) whenever the report stays internal; ask
+> whenever the report will be shared externally, since by-nc attribution obligations follow the
+> image outside the org. This is a preliminary gate — the final ask-user stop point below still
+> governs the actual publish action.
 
 ## Audience
 
@@ -170,3 +181,10 @@ When a `pixi run` task fails, match against the signatures below before investig
 After `validate/` reports `GO` (or `GO-WITH-WARNINGS`), the user executes
 `work/publish_commands.sh` at the final ask-user stop point. This skill's part is done; the
 published datasets' DOIs land back in the crosscheck report outside this skill's scope.
+
+## v1.0.1 — runtime ask-user stop point SP-17 (§0.5)
+
+Added a "0.5 Ask-User Stop Points (runtime parameters)" section documenting SP-17 (image license
+policy for internal vs. external reports), with an explicit auto-pick condition. It is a
+preliminary gate — the final ask-user stop point (`work/publish_commands.sh`, above) remains the
+last stop before anything is actually published.

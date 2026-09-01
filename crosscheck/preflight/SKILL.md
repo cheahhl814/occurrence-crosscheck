@@ -25,6 +25,12 @@ python3 preflight.py <input.csv> <realm> <marker> <out_params.json> [minLon minL
 Verifies required columns present, realm is one of the three valid values, at least one data row exists.
 Computes a padded bbox from the data if not supplied. Exits non-zero (NO-GO) on any check failure.
 
+`--require-confirm` (SP-10 backstop, see `../SKILL.md` §0.5): when the buffer resolves to `auto`
+mode on a degenerate input extent, preflight FAILs (exit 1) instead of only WARNing, forcing an
+explicit `--buffer-km`/`--buffer-deg`/`--bbox` declaration. With a user-declared buffer it instead
+prints `preflight: SP-10 confirmed (buffer=user-...)` and proceeds. Without the flag, behavior is
+unchanged (WARN only).
+
 ## Ask-user stop points (resolved per task pins — recorded here for the evidence trail)
 
 **SP1 — realm declaration.** Evidence: eDNA projects are realm-specific per run (PLAN §2). Recommend:
