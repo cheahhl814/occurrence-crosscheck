@@ -64,10 +64,10 @@ class TestCandidates(unittest.TestCase):
         from species_images import load_candidates
         with tempfile.NamedTemporaryFile("w", suffix=".csv", delete=False, newline="") as f:
             f.write("genus,candidate_species,rank,n_records_in_buffer\n"
-                    "Sillago,Sillago maculata Quoy & Gaimard, 1824,1,3\n"
-                    "Sillago,Sillago sihama (Forsskål, 1775),2,3\n"
+                    "Sillago,\"Sillago maculata Quoy & Gaimard, 1824\",1,3\n"
+                    "Sillago,\"Sillago sihama (Forsskål, 1775)\",2,3\n"
                     ",,0,0\n")
-            path = f.filename
+            path = f.name
         ts = load_candidates(Path(path))
         self.assertEqual(len(ts), 2)
         self.assertEqual(ts[0]["scientificName"], "Sillago maculata")

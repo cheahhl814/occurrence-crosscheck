@@ -341,6 +341,10 @@ const REPORT_DATA = {{ data_json | safe }};
     document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
     btn.classList.add("active");
     document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    // plotly renders at the hidden-tab fit if the map wasn't visible at load — re-fit on show
+    if(btn.dataset.tab==="species-maps" && window.Plotly && document.getElementById("occ-map").classList.contains("js-plotly-plot")){
+      requestAnimationFrame(()=>Plotly.Plots.resize("occ-map"));
+    }
     return true;
   }
   document.querySelectorAll(".tab-btn").forEach(btn=>{

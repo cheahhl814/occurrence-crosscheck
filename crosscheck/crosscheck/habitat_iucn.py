@@ -66,14 +66,23 @@ def read_species(list_path: Path) -> list[str]:
 
 
 def read_candidates(path: Path) -> list[dict]:
+    """genus_candidates.csv rows -> candidate habitat/IUCN targets.
+
+    genus_candidates.csv carries `candidate_species` (binomial + author citation),
+    NOT `scientificName` — binomial = first two whitespace tokens (same rule as
+    species_images.load_candidates). Accepts `scientificName` too for
+    forward-compat with pre-filtered manifests."""
     out, seen = [], set()
     for r in csv.DictReader(open(path, newline="")):
-        binom = (r.get("scientificName") or "").strip()
+        display = (r.get("candidate_species") or r.get("scientificName") or "").strip()
+        if not display:
+            continue
+        binom = " ".join(display.split()[:2])
         if not binom or binom.lower() in seen:
             continue
         seen.add(binom.lower())
-        out.append({"scientificName": binom, "candidate_of": r.get("candidate_of", ""),
-                    "candidate_rank": r.get("candidate_rank", "")})
+        out.append({"scientificName": binom, "candidate_of": r.get("genus") or r.get("candidate_of", ""),
+                    "candidate_rank": r.get("rank") or r.get("candidate_rank", "")})
     return out
 
 

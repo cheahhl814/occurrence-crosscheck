@@ -115,3 +115,12 @@ default 150 km). The old separate fetch-buffer is now an internal data-collectio
   ≤ R but known beyond — visible on the map) / NO_RECORD (absent from GBIF/OBIS everywhere we looked).
 - Env/WorldClim sampling regions are UNCHANGED (buffer stays an internal env-envelope setting).
 
+## v2.5.2 — habitat-iucn candidate parsing fix (H1, found in battle-test rebuild)
+
+`read_candidates()` read a `scientificName` column that `genus_candidates.csv` does not carry
+(it has `candidate_species` with author citation) — so `--candidates` appended ZERO rows to
+`habitat_iucn.csv`, silently. Reader now parses `candidate_species` (binomial = first two
+tokens, mirroring species_images.load_candidates), accepts `scientificName` for compat, and
+maps `genus`/`rank` with `candidate_of`/`candidate_rank` fallbacks. Battle-test rebuild went
+48 → 101 manifest taxa after the fix.
+
