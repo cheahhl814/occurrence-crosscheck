@@ -25,6 +25,7 @@
 
 suppressPackageStartupMessages({
   library(optparse); library(jsonlite); library(ggplot2); library(sf); library(dplyr)
+  suppressPackageStartupMessages({ library(jpeg); library(grid) })
 })
 
 script_dir <- dirname(sub("^--file=", "", grep("^--file=", commandArgs(FALSE), value = TRUE)))
@@ -46,6 +47,8 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--input-label", type = "character", default = NULL, help = "alias of --label (run_phase compatibility)"),
   make_option("--overlay", type = "character", help = "context_occurrences.csv (GBIF/OBIS backdrop)"),
   make_option("--params", type = "character", help = "crosscheck params.json"),
+  make_option("--images", type = "character", default = NULL,
+              help = "species_images.csv manifest (crosscheck species-images, §11.8) — embeds citable photo + credit"),
   make_option("--counts", type = "character", default = "work/occurrence_counts.json",
               help = "occurrence_counts.json from the crosscheck run"),
   make_option("--outdir", type = "character", default = "species_maps"),
@@ -57,7 +60,7 @@ opt <- parse_args(OptionParser(option_list = list(
   make_option("--max-species", type = "numeric", default = 200)
 )))
 
-for (f in c(opt$input, opt$overlay, opt$params))
+for (f in c(opt$input, opt$overlay, opt$params, if (!is.null(opt$images)) opt$images))
   if (!file.exists(f)) stop(sprintf("plot_per_species: not found: %s", f), call. = FALSE)
 
 df <- load_input(opt$input)
@@ -68,6 +71,11 @@ df$trait_depth_max_m <- as.numeric(df$trait_depth_max_m)
 
 params <- jsonlite::fromJSON(opt$params)
 counts <- if (file.exists(opt$counts)) jsonlite::fromJSON(opt$counts) else list()
+img_manifest <- if (!is.null(opt$images) && file.exists(opt$images)) {
+  m <- read.csv(opt$images, stringsAsFactors = FALSE, colClasses = "character")
+  m$abs_path <- ifelse(nzchar(m$local_file), file.path(dirname(normalizePath(opt$images)), m$local_file), "")
+  m
+} else NULL
 
 opt_label <- if (!is.null(opt$label)) opt$label else if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections"
 buffer_km <- if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else {
@@ -107,6 +115,7 @@ binom_key <- function(nm) tolower(paste(head(strsplit(trimws(nm), "\\s+")[[1]], 
 out_root <- file.path(opt$outdir, "species_maps")
 dir.create(out_root, recursive = TRUE, showWarnings = FALSE)
 slug <- function(x) gsub("[^A-Za-z0-9._-]+", "_", x)
+trunc_credit <- function(x, w = 60) { x <- gsub(",? *uploaded by.*$", "", x); if (nchar(x) > w) paste0(substr(x, 1, w - 3), "...") else x }
 
 species <- sort(unique(na.omit(df$scientificName)))
 species <- head(species, opt[["max-species"]])
@@ -114,6 +123,14 @@ n_ok <- 0
 
 for (nm in species) {
   det <- df[df$scientificName == nm & !is.na(df$decimalLatitude), , drop = FALSE]
+  # citable photo (v2.3.0 species_images manifest): embed thumbnail + credit line
+  im <- if (!is.null(img_manifest)) img_manifest[img_manifest$scientificName == nm & nzchar(img_manifest$local_file), , drop = FALSE] else NULL
+  im_path <- if (!is.null(im) && nrow(im) > 0 && file.exists(im$abs_path)) im$abs_path else NA_character_
+  photo_credit <- if (!is.null(im) && nrow(im) > 0) sprintf("Photo: %s (%s%s) via %s",
+        trunc_credit(if (nzchar(im$creator[1])) im$creator[1] else im$rightsHolder[1]),
+        im$license[1],
+        if (nzchar(im$flag[1]) && im$flag[1] == "by-nc") ", license terms apply" else "",
+        im$source[1]) else if (!is.null(im) && nrow(im) > 0) sprintf("No citable photo (%s)", im$flag[1]) else ""
   ctx <- ctx_all[ctx_all$key == binom_key(nm), , drop = FALSE]
   e <- counts[[nm]]
   gb <- if (!is.null(e$gbif)) e$gbif else 0L
@@ -161,6 +178,18 @@ for (nm in species) {
     geom_point(data = det, aes(x = decimalLongitude, y = decimalLatitude),
                shape = 23, fill = col_det, colour = "black", size = 3.4, stroke = 0.5) +
     coord_sf(xlim = ex[c(1, 3)], ylim = ex[c(2, 4)], expand = FALSE) +
+    { if (!is.na(im_path)) {
+        img <- try(jpeg::readJPEG(im_path), silent = TRUE)
+        if (!inherits(img, "try-error")) {
+          d <- dim(img); step <- max(1L, min(as.integer(d[1] / 220), as.integer(d[2] / 220)) + 1L)
+          small <- img[seq(1L, d[1], by = step), seq(1L, d[2], by = step), , drop = FALSE]
+          xr <- diff(range(ex[1], ex[3])); yr <- diff(range(ex[2], ex[4]))
+          side <- min(xr, yr) * 0.17
+          x0 <- ex[3] - xr * 0.015 - side; y1 <- ex[4] - yr * 0.015; y0 <- y1 - side * (d[1]/d[2]) * (step^0)
+          annotation_custom(grid::rasterGrob(as.raster(small), interpolate = TRUE),
+                            xmin = x0, xmax = x0 + side, ymin = y0, ymax = y1)
+        } else NULL
+      } else NULL } +
     labs(title = nm,
          subtitle = sprintf(
            "%s: %s — %s GBIF · %s OBIS records in the %s km buffer · %s%s",
@@ -168,8 +197,10 @@ for (nm in species) {
            format(gb, big.mark = ","), format(ob, big.mark = ","),
            format(buffer_km, big.mark = ","), det_note, depth_note),
          x = "Longitude", y = "Latitude",
-         caption = sprintf("pink diamond = eDNA detection site · grey = GBIF/OBIS known occurrences · dashed ring = %s km buffer · %s",
-                           format(buffer_km, big.mark = ","), opt_label)) +
+         caption = paste(c(
+             sprintf("pink diamond = eDNA detection site · grey = GBIF/OBIS known occurrences · dashed ring = %s km buffer · %s",
+                     format(buffer_km, big.mark = ","), opt_label),
+             if (nzchar(photo_credit)) photo_credit else NULL), collapse = " · ")) +
     theme_bw(base_size = 10) +
     theme(panel.grid = element_line(colour = "grey92", linewidth = 0.25),
           plot.title = element_text(face = "italic", size = 12),

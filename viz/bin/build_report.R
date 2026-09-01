@@ -127,6 +127,9 @@ for (i in seq_len(nrow(rendered))) {
                                   fig_num, exg("x"), exg("y")),
     "06_multispecies_overview" = sprintf("**Figure %d.** Multi-panel overview combining %s.", fig_num,
                                   ifelse(is.null(exg("panels")), "?", paste(unlist(exg("panels")), collapse = " + "))),
+    "07_species_contact_sheet" = sprintf("**Figure %d.** Citable species reference images: %s photos embedded, %s species flagged (no CC license / no image / ambiguous taxon) — attribution and license per species on each tile; source manifest `species_images.csv` (PLAN §11.8). FishBase photos are copyrighted and are never embedded.",
+                                  fig_num, ifelse(is.na(exg("n_images")), "?", exg("n_images")),
+                                  ifelse(is.na(exg("n_flagged")), "?", exg("n_flagged"))),
     sprintf("**Figure %d.** %s", fig_num, as.character(r$figure))
   )
   files <- unlist(r$file); files <- if (is.null(files)) unlist(exg("outputs")) else files

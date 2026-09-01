@@ -85,3 +85,5 @@ Full histories: `../../../archieved/*.bundle` (verified complete; `git clone <bu
 - [ ] Per-sub-suite: `cd crosscheck && python3 test/test_smoke.py` (84 checks) · `cd viz && python3 test_smoke.py` (22) · `cd publish && python3 test_smoke.py` (22)
 - [ ] Realm matrix: `cd crosscheck && bash test/run_battle_test.sh`
 - [ ] Historical battle-test reports: `*/battle-test-report.md` (v1.0.0 verdicts: PASS / PASS-WITH-WARNINGS / PASS)
+
+- `species-images` (crosscheck v2.3.0): citable per-species photos (iNat-first, GBIF fallback) as a flagged manifest — visualized by the viz sub-skill via `--images` (fig 07 contact sheet + map thumbnails). See PLAN §11.9.

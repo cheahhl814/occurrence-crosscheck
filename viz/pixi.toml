@@ -23,6 +23,8 @@ r-dplyr = "*"
 r-tidyr = "*"
 r-readr = "*"
 r-jsonlite = "*"
+# v1.4.0: species-image embedding (contact sheet + per-species map thumbnails)
+r-jpeg = "*"
 
 [tasks]
 # Realm-aware run config: config/run-config.<realm>.json (marine | freshwater | terrestrial)
@@ -33,6 +35,8 @@ preflight = "Rscript bin/viz_run.R --phase preflight"
 maps = "Rscript bin/plot_map.R"
 profiles = "Rscript bin/plot_profiles.R"
 report = "Rscript bin/build_report.R"
+speciesmaps = "Rscript bin/plot_per_species.R"
+contactsheet = "Rscript bin/plot_contact_sheet.R"
 # Battle-test fixture generation:
 test-fixture = "Rscript test/make_test_fixture.R"
 # Self-check: compares this skill's git SHA to upstream (github.com/cheahhl814/occurrence-viz).

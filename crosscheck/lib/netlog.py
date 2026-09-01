@@ -15,7 +15,10 @@ import os
 from pathlib import Path
 import requests
 
-ALLOWED_SOURCES = {"gbif", "obis", "worms", "fishbase", "bio-oracle", "worldclim-chelsa"}
+ALLOWED_SOURCES = {"gbif", "obis", "worms", "fishbase", "bio-oracle", "worldclim-chelsa",
+                   # species-images fetcher (v2.3.0): iNaturalist is realm-agnostic
+                   # (GBIF-spine tier: used for licensed portraits, not occurrence data)
+                   "inaturalist"}
 
 
 class NetLog:

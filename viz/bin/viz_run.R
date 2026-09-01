@@ -24,6 +24,8 @@ option_list <- list(
   make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
   make_option("--overlay", type = "character", default = NULL,
               help = "Context occurrences CSV (passed to the maps worker)"),
+  make_option("--images", type = "character", default = NULL,
+              help = "species_images.csv manifest -> contact sheet (fig 07) + per-species map thumbnails"),
   make_option("--per-species", action = "store_true", default = FALSE,
               help = "maps phase also emits per-species concordance/discordance maps (plot_per_species.R)"),
   make_option("--near-km", type = "numeric", default = 100,
@@ -96,13 +98,17 @@ run_phase <- function(phase, script, args_extra = character(0)) {
 # and profiles the input flag is required:
 if ("preflight" %in% phases) phases <- setdiff(phases, "preflight")
 if (isTRUE(opt[["per-species"]]) && !"speciesmaps" %in% phases) phases <- c(phases, "speciesmaps")
+if (!is.null(opt$images) && !"contactsheet" %in% phases) {
+  phases <- setdiff(phases, "report")
+  phases <- c(phases, "contactsheet", "report")  # contact sheet feeds the captions manifest
+}
 if (length(phases) == 0) {
   log_msg("preflight-only run complete (no figures requested).")
   quit(status = 0)
 }
 ok <- TRUE
 for (ph in phases) {
-  script <- switch(ph, maps = "plot_map.R", speciesmaps = "plot_per_species.R",
+  script <- switch(ph, maps = "plot_map.R", speciesmaps = "plot_per_species.R", contactsheet = "plot_contact_sheet.R",
                    profiles = "plot_profiles.R", report = "build_report.R",
                    stop(sprintf("unknown phase '%s' (maps | speciesmaps | profiles | report)", ph), call. = FALSE))
     extra <- if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)
@@ -113,6 +119,11 @@ for (ph in phases) {
                "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
     if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
     if (!is.null(opt$counts)) extra <- c(extra, "--counts", opt$counts)
+    if (!is.null(opt$images)) extra <- c(extra, "--images", opt$images)
+  }
+  if (ph == "contactsheet") {
+    extra <- c("--images", opt$images,
+               "--input-label", if (!is.null(opt$`input-label`)) opt$`input-label` else "species reference images")
   }
   ok <- run_phase(ph, script, extra) && ok
 }

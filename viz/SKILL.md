@@ -138,3 +138,18 @@ pixi run viz --input test/test_fixture_terrestrial.parquet --config config/run-c
 - Built with [bioinfo-skill-creator](https://github.com/cheahhl814/bioinfo-skill-creator) (v1.1.0), PLAN-marine-edna-meta-skill.md Phase 2 spec.
 - Point-subsampling + basemap fallback pattern reused from the workspace `AMPLICON/bin/geocurate_inventory.R` experience (pinned).
 - Sibling skills: `edna-crosscheck` (Phase 1, file contract §11.2) and `occurrence-publish` (Phase 3) — file-contract only, no code coupling.
+## v1.4.0 — citable species images (`--images`)
+
+`pixi run -e default -- Rscript bin/viz_run.R --input F.parquet --config config/<realm>.json --outdir OUT --per-species --near-km 150 --buffer-km 2000 --params <params.json> --counts <occurrence_counts.json> --images <work_dir>/species_images.csv`
+
+Two additions consume the crosscheck `species_images.csv` manifest (PLAN §11.9):
+
+- **fig 07_species_contact_sheet** (`bin/plot_contact_sheet.R`): one tile per species — cached
+  photo + credit + SPDX license, colour-coded by flag; flagged/no-image taxa render as explicit
+  placeholder tiles (flags never silently drop). Caption entry auto-appended by build_report.
+- **per-species map thumbnails** (`plot_per_species.R --images`): photo inset top-right + credit
+  line in the figure caption ("Photo: <creator> (<license>) via <source>").
+
+Licence policy: cc-best (CC0/CC-BY(-SA)) preferred; by-nc allowed for internal reports;
+all-rights-reserved and unlicensed images are excluded from embeds in the fetcher upstream.
+Standalone workers: `pixi run -e default -- Rscript bin/plot_contact_sheet.R --images <csv> --outdir <out>`.
