@@ -25,6 +25,9 @@ r-readr = "*"
 r-jsonlite = "*"
 # v1.4.0: species-image embedding (contact sheet + per-species map thumbnails)
 r-jpeg = "*"
+# v1.7.0: HTML report generator (Jinja2 template + vendored plotly.min.js in vendor/)
+python = ">=3.11"
+jinja2 = "*"
 
 [tasks]
 # Realm-aware run config: config/run-config.<realm>.json (marine | freshwater | terrestrial)
@@ -39,6 +42,8 @@ speciesmaps = "Rscript bin/plot_per_species.R"
 contactsheet = "Rscript bin/plot_contact_sheet.R"
 # Battle-test fixture generation:
 test-fixture = "Rscript test/make_test_fixture.R"
+# v1.7.0: self-contained HTML report (5 tabs, filters, plotly scattergeo, quarantine section)
+report-html = "python3 bin/build_report_html.py"
 # Self-check: compares this skill's git SHA to upstream (github.com/cheahhl814/occurrence-viz).
 # See bin/skill-update-check.py for the verdict legend (UP-TO-DATE / LOCAL-AHEAD / BEHIND-BY-N / OFFLINE / NO-ORIGIN).
 update-check = "python3 bin/skill-update-check.py"

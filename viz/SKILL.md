@@ -182,3 +182,25 @@ layer (no CONCORDANT/DISCORDANT words, no ledger verdict counts, separate
 - **fig 07 + 08 contact sheets**: IUCN-colour-coded status line per tile (LC #1a7a3a -> CR #8e2a2a; NE/DD grey),
   bolded above the license line
 Helpers live in bin/lib_viz.R (`habitat_iucn_note`, `iucn_col_for`, `IUCN_TILE_COL`).
+
+## v1.7.0 — self-contained HTML report (`report-html` phase)
+
+`pixi run report-html --params <params.json> --counts <occurrence_counts.json> --habitat <habitat_iucn.csv> \
+  --species-images <csv> --candidate-images <csv> --candidates <genus_candidates.csv> \
+  --context <context_occurrences.csv> --candidates-context <candidates_context_occurrences.csv> \
+  --species-maps <dir> --candidate-panels <dir> --figures <dir> --images-dir <dir> \
+  --out <report_dir> [--near-km 150] [--max-candidates 3] [--species-limit N --candidates-limit N (smoke)]`
+
+- Generator: bin/build_report_html.py (python + jinja2, stdlib otherwise) + templates/report.html.j2;
+  plotly.min.js vendored in vendor/ and COPIED into <out>/vendor/ so the report folder is portable
+- Four tabs: Overview (KPIs, SVG verdict/IUCN/habitat charts, plotly scattergeo occurrence map with
+  buffer ring + detection site, contact-sheet thumbnails), Species (filterable cards: verdict badge, map
+  + photo lightbox, habitat + IUCN, per-image CC attribution), Genus Candidates (QUARANTINE: amber dashed
+  cards, repeated GENUS-LEVEL HYPOTHESIS banner, SUPPORTED/WEAK/NO_RECORD filters), Methods
+- Fully offline: no CDN, no runtime fetch (inline REPORT_DATA JSON); deep links #species/#candidates work
+- Hard cross-checks (exit 2 on mismatch): generator-computed verdict/plausibility MUST equal the map/panel
+  filename suffixes — wrong verdicts are never rendered; also fails on ambiguous/stale duplicate panels
+- Candidate context = candidates-context + detected backdrop MERGED (binomial-key join), mirroring
+  plot_genus_candidates.R exactly (the candidates-only fetch is GBIF-only + 100-row-capped)
+- Outputs report/index.html (~850 KB) + vendor/plotly.min.js; PNG assets referenced relatively, never copied
+

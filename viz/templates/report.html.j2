@@ -1,0 +1,663 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Occurrence Crosscheck Report — {{ meta.realm }} / {{ meta.marker }}</title>
+<style>
+:root{
+  --bg:#f7f8fa; --surface:#ffffff; --text:#1b2430; --muted:#5b6472; --border:#dde2e8;
+  --accent:#2a5fa8; --accent-dim:#e7eefb;
+  --green:#1f8a53; --green-bg:#e7f6ee;
+  --coral:#c1462b; --coral-bg:#fbeae5;
+  --slate:#6b7280; --slate-bg:#eceff2;
+  --amber:#b3720a; --amber-bg:#fbf1de; --amber-border:#d9a441;
+  --gbif:#4a7fb5; --obis:#2a9d8f;
+  --shadow:0 1px 2px rgba(20,30,45,.06),0 1px 8px rgba(20,30,45,.05);
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#12161c; --surface:#1a2028; --text:#e7ebf0; --muted:#93a0b0; --border:#2b333e;
+    --accent:#7fb0ea; --accent-dim:#1c2a3d;
+    --green:#3fbf80; --green-bg:#123123;
+    --coral:#e5806a; --coral-bg:#331c17;
+    --slate:#9aa4b0; --slate-bg:#232a32;
+    --amber:#e0ab52; --amber-bg:#332608; --amber-border:#8a651f;
+    --gbif:#7fb0ea; --obis:#5cd0c0;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;padding:0}
+body{
+  background:var(--bg); color:var(--text); display:flex; min-height:100vh;
+  font:14px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+}
+i.sci{font-style:italic}
+a{color:var(--accent)}
+.sidebar{
+  width:220px; flex:0 0 220px; background:var(--surface); border-right:1px solid var(--border);
+  position:sticky; top:0; height:100vh; padding:20px 0; display:flex; flex-direction:column; gap:2px;
+}
+.sidebar h1{font-size:14px; padding:0 18px 14px; margin:0; border-bottom:1px solid var(--border); margin-bottom:10px}
+.sidebar h1 small{display:block; color:var(--muted); font-weight:400; font-size:11px; margin-top:3px}
+.tab-btn{
+  display:flex; align-items:center; gap:10px; padding:10px 18px; background:none; border:none;
+  border-left:3px solid transparent; text-align:left; font-size:13.5px; color:var(--text); cursor:pointer;
+}
+.tab-btn:hover{background:var(--accent-dim)}
+.tab-btn.active{border-left-color:var(--accent); background:var(--accent-dim); color:var(--accent); font-weight:600}
+.tab-btn .ico{width:18px; text-align:center}
+main{flex:1; min-width:0; padding:28px 34px 60px}
+.panel{display:none}
+.panel.active{display:block}
+.eyebrow{font-size:11px; letter-spacing:.06em; text-transform:uppercase; color:var(--muted); margin:0 0 4px}
+h2{margin:0 0 18px; font-size:20px}
+.stat-grid{display:grid; grid-template-columns:repeat(auto-fit,minmax(150px,1fr)); gap:12px; margin-bottom:24px}
+.stat-card{
+  background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:14px 16px;
+  box-shadow:var(--shadow);
+}
+.stat-card .n{font-size:24px; font-weight:700}
+.stat-card .l{font-size:11.5px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.grid-2{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:24px}
+.card{background:var(--surface); border:1px solid var(--border); border-radius:8px; padding:16px; box-shadow:var(--shadow)}
+.card h3{margin:0 0 10px; font-size:13px; color:var(--muted); text-transform:uppercase; letter-spacing:.03em}
+.fig-strip{display:flex; gap:10px; flex-wrap:wrap; margin-top:10px}
+.fig-strip img{height:110px; border:1px solid var(--border); border-radius:6px; cursor:zoom-in; background:var(--slate-bg)}
+#occ-map{width:100%; height:460px; border:1px solid var(--border); border-radius:8px; background:var(--surface)}
+.badge{display:inline-block; padding:2px 8px; border-radius:20px; font-size:11px; font-weight:600; letter-spacing:.02em}
+.badge.CONCORDANT{background:var(--green-bg); color:var(--green)}
+.badge.DISCORDANT{background:var(--coral-bg); color:var(--coral)}
+.badge.NO_RECORD{background:var(--slate-bg); color:var(--slate)}
+.badge.SUPPORTED{background:var(--green-bg); color:var(--green)}
+.badge.WEAK{background:var(--amber-bg); color:var(--amber)}
+.filter-bar{display:flex; gap:10px; flex-wrap:wrap; align-items:center; margin-bottom:18px; padding:12px 14px;
+  background:var(--surface); border:1px solid var(--border); border-radius:8px}
+.filter-bar label{font-size:11.5px; color:var(--muted); display:flex; flex-direction:column; gap:3px}
+.filter-bar select, .filter-bar input[type=search]{
+  font:inherit; padding:5px 8px; border:1px solid var(--border); border-radius:5px; background:var(--bg); color:var(--text);
+}
+.filter-bar .chip-group{display:flex; gap:6px; flex-wrap:wrap}
+.filter-bar .chip{font-size:11.5px; padding:4px 9px; border:1px solid var(--border); border-radius:20px; cursor:pointer; user-select:none; background:var(--bg)}
+.filter-bar .chip.on{background:var(--accent); border-color:var(--accent); color:#fff}
+.count-line{color:var(--muted); font-size:12px; margin:-10px 0 14px}
+.taxon-grid{display:grid; grid-template-columns:repeat(auto-fill,minmax(270px,1fr)); gap:16px}
+.taxon-card{background:var(--surface); border:1px solid var(--border); border-radius:9px; overflow:hidden; box-shadow:var(--shadow); display:flex; flex-direction:column}
+.taxon-card .thumbs{display:flex}
+.taxon-card .thumbs img{width:50%; height:130px; object-fit:cover; cursor:zoom-in; background:var(--slate-bg); display:block}
+.taxon-card .thumbs .placeholder{width:50%; height:130px; display:flex; align-items:center; justify-content:center; background:var(--slate-bg); color:var(--muted); font-size:10.5px; text-align:center; padding:6px}
+.taxon-card .body{padding:11px 13px; display:flex; flex-direction:column; gap:6px}
+.taxon-card .name-row{display:flex; justify-content:space-between; align-items:baseline; gap:8px}
+.taxon-card .name-row .sci{font-size:14px}
+.taxon-card .meta-row{display:flex; gap:10px; flex-wrap:wrap; font-size:11.5px; color:var(--muted)}
+.taxon-card .flags{display:flex; gap:5px; flex-wrap:wrap}
+.taxon-card .flag-pill{font-size:10px; padding:1px 7px; border-radius:20px; background:var(--slate-bg); color:var(--muted)}
+.taxon-card .attrib{font-size:10.5px; color:var(--muted); border-top:1px solid var(--border); padding-top:6px; margin-top:2px}
+.taxon-card .attrib a{color:var(--muted)}
+.candidates-shell{border:1px dashed var(--amber-border); background:var(--amber-bg); border-radius:10px; padding:16px; margin-bottom:18px}
+.candidates-shell .warn-banner{display:flex; gap:8px; align-items:center; font-size:12.5px; font-weight:700; color:var(--amber); text-transform:uppercase; letter-spacing:.02em}
+.candidate-card{border:1px dashed var(--amber-border); background:var(--surface)}
+.candidate-card .quarantine-tag{background:var(--amber-bg); color:var(--amber); font-size:10px; font-weight:700; text-transform:uppercase; letter-spacing:.03em; padding:5px 10px; border-bottom:1px dashed var(--amber-border)}
+.candidate-card .badge.SUPPORTED, .candidate-card .badge.WEAK, .candidate-card .badge.NO_RECORD{border:1px solid var(--amber-border)}
+dialog#lightbox{border:none; border-radius:10px; padding:0; max-width:92vw; max-height:92vh; background:var(--surface); color:var(--text)}
+dialog#lightbox::backdrop{background:rgba(10,14,20,.7)}
+dialog#lightbox img{display:block; max-width:88vw; max-height:78vh; object-fit:contain}
+dialog#lightbox .lb-cap{padding:10px 16px; font-size:12.5px; color:var(--muted); border-top:1px solid var(--border)}
+dialog#lightbox .lb-close{position:absolute; top:8px; right:10px; background:none; border:none; font-size:20px; cursor:pointer; color:var(--text)}
+.methods dl{display:grid; grid-template-columns:180px 1fr; gap:6px 14px; margin:0}
+.methods dt{color:var(--muted)}
+.methods dt, .methods dd{margin:0; padding:3px 0}
+footer.stamp{margin-top:36px; padding-top:14px; border-top:1px solid var(--border); font-size:11px; color:var(--muted)}
+@media (max-width:900px){
+  body{flex-direction:column}
+  .sidebar{position:static; height:auto; width:100%; flex-direction:row; overflow-x:auto}
+  .grid-2{grid-template-columns:1fr}
+}
+</style>
+</head>
+<body>
+
+<nav class="sidebar">
+  <h1>Occurrence Crosscheck
+    <small>{{ meta.realm }} · {{ meta.marker }} · {{ meta.run }}</small>
+  </h1>
+  <button class="tab-btn active" data-tab="overview"><span class="ico">&#9673;</span>Overview</button>
+  <button class="tab-btn" data-tab="species"><span class="ico">&#9899;</span>Species</button>
+  <button class="tab-btn" data-tab="candidates"><span class="ico">&#9888;</span>Genus Candidates</button>
+  <button class="tab-btn" data-tab="methods"><span class="ico">&#9776;</span>Methods</button>
+</nav>
+
+<main>
+
+  <section class="panel active" data-panel="overview" id="panel-overview">
+    <p class="eyebrow">Overview</p>
+    <h2>Detection-to-occurrence crosscheck summary</h2>
+    <div class="stat-grid" id="ov-stats"></div>
+
+    <div class="grid-2">
+      <div class="card">
+        <h3>Species verdicts</h3>
+        <div id="chart-verdicts"></div>
+      </div>
+      <div class="card">
+        <h3>Candidate plausibility</h3>
+        <div id="chart-plausibility"></div>
+      </div>
+      <div class="card">
+        <h3>IUCN Red List category</h3>
+        <div id="chart-iucn"></div>
+      </div>
+      <div class="card">
+        <h3>Habitat mix</h3>
+        <div id="chart-habitat"></div>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>Occurrence map — detected species, buffer &amp; detection site</h3>
+      <div id="occ-map"></div>
+    </div>
+
+    <div class="card" style="margin-top:16px">
+      <h3>Overview figures</h3>
+      <div class="fig-strip" id="ov-figs"></div>
+    </div>
+
+    <footer class="stamp" id="ov-footer-stamp"></footer>
+  </section>
+
+  <section class="panel" data-panel="species" id="panel-species">
+    <p class="eyebrow">Species</p>
+    <h2>Per-species crosscheck (detected taxa)</h2>
+    <div class="filter-bar">
+      <label>Verdict
+        <select id="sp-filter-verdict">
+          <option value="">All</option>
+          <option value="CONCORDANT">Concordant</option>
+          <option value="DISCORDANT">Discordant</option>
+          <option value="NO_RECORD">No record</option>
+        </select>
+      </label>
+      <label>IUCN category
+        <select id="sp-filter-iucn"><option value="">All</option></select>
+      </label>
+      <label>Search
+        <input type="search" id="sp-filter-search" placeholder="scientific name">
+      </label>
+      <label>Habitat
+        <span class="chip-group" id="sp-filter-habitat">
+          <span class="chip" data-flag="marine">marine</span>
+          <span class="chip" data-flag="brackish">brackish</span>
+          <span class="chip" data-flag="freshwater">freshwater</span>
+          <span class="chip" data-flag="terrestrial">terrestrial</span>
+        </span>
+      </label>
+    </div>
+    <p class="count-line" id="sp-count-line"></p>
+    <div class="taxon-grid" id="sp-grid"></div>
+  </section>
+
+  <section class="panel" data-panel="candidates" id="panel-candidates">
+    <p class="eyebrow">Genus Candidates</p>
+    <h2>Quarantined genus-only ASV hypotheses</h2>
+    <div class="candidates-shell">
+      <div class="warn-banner">&#9888; GENUS-LEVEL HYPOTHESIS — NOT A SPECIES IDENTIFICATION</div>
+      <p style="margin:8px 0 0; font-size:12.5px; color:var(--text)">
+        These candidates were predicted from genus-only ASVs (no species-level match). Each card below
+        is a plausibility hypothesis, not a confirmed detection — treat separately from the Species tab.
+      </p>
+    </div>
+    <div class="filter-bar">
+      <label>Plausibility
+        <select id="cd-filter-plaus">
+          <option value="">All</option>
+          <option value="SUPPORTED">Supported</option>
+          <option value="WEAK">Weak</option>
+          <option value="NO_RECORD">No record</option>
+        </select>
+      </label>
+      <label>Genus
+        <select id="cd-filter-genus"><option value="">All</option></select>
+      </label>
+      <label>Search
+        <input type="search" id="cd-filter-search" placeholder="candidate species">
+      </label>
+    </div>
+    <p class="count-line" id="cd-count-line"></p>
+    <div class="taxon-grid" id="cd-grid"></div>
+  </section>
+
+  <section class="panel methods" data-panel="methods" id="panel-methods">
+    <p class="eyebrow">Methods</p>
+    <h2>Run parameters &amp; verdict logic</h2>
+    <div class="card">
+      <h3>Run parameters</h3>
+      <dl id="meta-dl"></dl>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Verdict logic</h3>
+      <p style="font-size:13px">
+        <b>NO_RECORD</b> — zero GBIF + OBIS records in the search buffer.<br>
+        <b>CONCORDANT</b> — nearest known record within <span id="m-near-km"></span> km of the detection site.<br>
+        <b>DISCORDANT</b> — records exist, but the nearest is farther than <span id="m-near-km2"></span> km away.<br><br>
+        Genus-candidate <b>plausibility</b> uses the same thresholding against candidate-only occurrence context
+        (SUPPORTED / WEAK / NO_RECORD in place of CONCORDANT / DISCORDANT / NO_RECORD) and is always kept
+        visually separate from species-level verdicts (see Genus Candidates tab).
+      </p>
+    </div>
+    <div class="card" style="margin-top:16px">
+      <h3>Data sources</h3>
+      <p style="font-size:13px">GBIF occurrence records · OBIS occurrence records · WoRMS (habitat/marine status) ·
+      IUCN Red List (conservation category) · iNaturalist / GBIF (CC-licensed reference photos, attributed per-card).</p>
+    </div>
+  </section>
+
+</main>
+
+<dialog id="lightbox">
+  <button class="lb-close" id="lb-close" aria-label="Close">&times;</button>
+  <img id="lb-img" src="" alt="">
+  <div class="lb-cap" id="lb-cap"></div>
+</dialog>
+
+<script>
+const REPORT_DATA = {{ data_json | safe }};
+</script>
+<script src="{{ plotly_src }}"></script>
+<script>
+(function(){
+  "use strict";
+  const D = REPORT_DATA;
+
+  // ---------- tabs ----------
+  // ---------- tabs ----------
+  function showTab(name){
+    const btn = document.querySelector('.tab-btn[data-tab="'+name+'"]');
+    if(!btn) return false;
+    document.querySelectorAll(".tab-btn").forEach(b=>b.classList.remove("active"));
+    document.querySelectorAll(".panel").forEach(p=>p.classList.remove("active"));
+    btn.classList.add("active");
+    document.getElementById("panel-"+btn.dataset.tab).classList.add("active");
+    return true;
+  }
+  document.querySelectorAll(".tab-btn").forEach(btn=>{
+    btn.addEventListener("click", ()=>{
+      showTab(btn.dataset.tab);
+      history.replaceState(null, "", "#"+btn.dataset.tab);
+    });
+  });
+  // deep links: #species / #candidates / #methods / #overview on load + back/forward
+  function tabFromHash(){
+    const h = (location.hash||"").replace("#","");
+    if (h) showTab(h);
+  }
+  window.addEventListener("hashchange", tabFromHash);
+  tabFromHash();
+
+  // ---------- lightbox ----------
+  const lightbox = document.getElementById("lightbox");
+  const lbImg = document.getElementById("lb-img");
+  const lbCap = document.getElementById("lb-cap");
+  function openLightbox(src, caption){
+    lbImg.src = src;
+    lbCap.textContent = caption || "";
+    lightbox.showModal();
+  }
+  document.getElementById("lb-close").addEventListener("click", ()=>lightbox.close());
+  lightbox.addEventListener("click", (e)=>{ if(e.target===lightbox) lightbox.close(); });
+
+  // ---------- small DOM helpers (textContent only -- never innerHTML on CSV-derived text) ----------
+  function el(tag, cls, text){
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text!==undefined && text!==null) e.textContent = text;
+    return e;
+  }
+  function sciName(text){
+    const i = document.createElement("i");
+    i.className = "sci";
+    i.textContent = text;
+    return i;
+  }
+
+  // ---------- overview stat cards ----------
+  (function renderOverviewStats(){
+    const wrap = document.getElementById("ov-stats");
+    const sv = D.counts.species_verdicts, cp = D.counts.candidate_plausibility;
+    const cards = [
+      ["Detected species", D.species.length],
+      ["Concordant", sv.CONCORDANT],
+      ["Discordant", sv.DISCORDANT],
+      ["No record", sv.NO_RECORD],
+      ["Genus candidates", D.candidates.length],
+      ["Candidates supported", cp.SUPPORTED],
+    ];
+    cards.forEach(([label, n])=>{
+      const c = el("div","stat-card");
+      c.appendChild(el("div","n", n));
+      c.appendChild(el("div","l", label));
+      wrap.appendChild(c);
+    });
+  })();
+
+  // ---------- hand-rolled inline SVG charts ----------
+  function svg(w,h){
+    const s = document.createElementNS("http://www.w3.org/2000/svg","svg");
+    s.setAttribute("width", w); s.setAttribute("height", h);
+    s.setAttribute("viewBox", "0 0 "+w+" "+h);
+    return s;
+  }
+  function svgEl(tag, attrs){
+    const e = document.createElementNS("http://www.w3.org/2000/svg", tag);
+    for(const k in attrs) e.setAttribute(k, attrs[k]);
+    return e;
+  }
+
+  function donut(targetId, hist, colorMap){
+    const target = document.getElementById(targetId);
+    const entries = Object.entries(hist).filter(([,v])=>v>0);
+    const total = entries.reduce((s,[,v])=>s+v,0);
+    const size = 150, r = 55, cx = 75, cy = 75, sw = 24;
+    const s = svg(size, size);
+    let acc = 0;
+    const circumf = 2*Math.PI*r;
+    if(total===0){ target.appendChild(el("p", null, "no data")); return; }
+    entries.forEach(([k,v])=>{
+      const frac = v/total;
+      const dash = frac*circumf;
+      const c = svgEl("circle", {
+        cx, cy, r, fill:"none", stroke: colorMap[k] || "#999",
+        "stroke-width": sw, "stroke-dasharray": dash+" "+(circumf-dash),
+        "stroke-dashoffset": -acc, transform:"rotate(-90 "+cx+" "+cy+")"
+      });
+      s.appendChild(c);
+      acc += dash;
+    });
+    target.appendChild(s);
+    const legend = el("div", null);
+    legend.style.marginTop = "8px";
+    entries.forEach(([k,v])=>{
+      const row = el("div", null);
+      row.style.cssText = "display:flex;align-items:center;gap:6px;font-size:11.5px;margin:2px 0";
+      const dot = el("span", null); dot.style.cssText = "width:9px;height:9px;border-radius:50%;background:"+(colorMap[k]||"#999")+";display:inline-block";
+      row.appendChild(dot);
+      row.appendChild(el("span", null, k+" ("+v+")"));
+      legend.appendChild(row);
+    });
+    target.appendChild(legend);
+  }
+
+  function hbar(targetId, hist, colorMap, order){
+    const target = document.getElementById(targetId);
+    const keys = order || Object.keys(hist);
+    const max = Math.max(1, ...keys.map(k=>hist[k]||0));
+    const rowH = 22, w = 260;
+    const s = svg(w, rowH*keys.length+4);
+    keys.forEach((k,i)=>{
+      const v = hist[k]||0;
+      const bw = (v/max) * (w-90);
+      s.appendChild(svgEl("rect", {x:0, y:i*rowH+2, width:bw, height:14, fill: (colorMap&&colorMap[k])||"var(--accent)", rx:3}));
+      const label = svgEl("text", {x:w-84, y:i*rowH+13, "font-size":11, fill:"currentColor"});
+      label.textContent = k+" ("+v+")";
+      s.appendChild(label);
+    });
+    target.appendChild(s);
+  }
+
+  donut("chart-verdicts", D.counts.species_verdicts, {CONCORDANT:"#1f8a53", DISCORDANT:"#c1462b", NO_RECORD:"#6b7280"});
+  donut("chart-plausibility", D.counts.candidate_plausibility, {SUPPORTED:"#1f8a53", WEAK:"#b3720a", NO_RECORD:"#6b7280"});
+  hbar("chart-iucn", D.counts.iucn_hist, {}, Object.keys(D.counts.iucn_hist).sort());
+  hbar("chart-habitat", D.counts.habitat_hist, {marine:"#4a7fb5", brackish:"#2a9d8f", freshwater:"#7fb0ea", terrestrial:"#b3720a"},
+       ["marine","brackish","freshwater","terrestrial"]);
+
+  // ---------- overview figure strip ----------
+  (function renderFigs(){
+    const wrap = document.getElementById("ov-figs");
+    Object.entries(D.figures).forEach(([name, path])=>{
+      const img = el("img");
+      img.src = path; img.loading = "lazy"; img.alt = name;
+      img.addEventListener("click", ()=>openLightbox(path, name));
+      wrap.appendChild(img);
+    });
+  })();
+
+  // ---------- footer stamp (also duplicated in overview panel per design) ----------
+  (function stamp(){
+    const text = "generated "+D.meta.generated_at+" · build_report_html.py v"+D.meta.generator_version+
+                 " · run: "+D.meta.run+" · params: "+D.meta.params_path;
+    document.getElementById("ov-footer-stamp").textContent = text;
+  })();
+
+  // ---------- methods tab ----------
+  (function renderMethods(){
+    const dl = document.getElementById("meta-dl");
+    const rows = [
+      ["Realm", D.meta.realm],
+      ["Marker", D.meta.marker],
+      ["Buffer (km)", D.meta.buffer_km],
+      ["Concordance threshold (km)", D.meta.near_km],
+      ["Detection site (lon, lat)", D.meta.detection_site.lon+", "+D.meta.detection_site.lat],
+      ["Run", D.meta.run],
+      ["Params file", D.meta.params_path],
+      ["Generator version", D.meta.generator_version],
+      ["Generated at", D.meta.generated_at],
+    ];
+    rows.forEach(([k,v])=>{
+      dl.appendChild(el("dt", null, k));
+      dl.appendChild(el("dd", null, String(v)));
+    });
+    document.getElementById("m-near-km").textContent = D.meta.near_km;
+    document.getElementById("m-near-km2").textContent = D.meta.near_km;
+  })();
+
+  // ---------- species card grid ----------
+  function imageBlock(image){
+    const wrap = document.createDocumentFragment();
+    if(image.placeholder){
+      const ph = el("div","placeholder", "no photo ("+(image.flag||"unavailable")+")");
+      wrap.appendChild(ph);
+    } else {
+      const img = el("img");
+      img.src = image.path; img.loading = "lazy"; img.alt = "";
+      img.addEventListener("click", ()=>openLightbox(image.path, image.creator+" · "+image.license));
+      wrap.appendChild(img);
+    }
+    return wrap;
+  }
+  function attribLine(image){
+    if(image.placeholder) return null;
+    const p = el("p","attrib");
+    p.appendChild(document.createTextNode("© "+image.creator+" · "+image.license+" · "+image.source+" · "));
+    const a = el("a", null, "source");
+    a.href = image.occurrence_url; a.target = "_blank"; a.rel = "noopener";
+    p.appendChild(a);
+    return p;
+  }
+
+  function renderSpeciesCard(sp){
+    const card = el("div","taxon-card");
+    const thumbs = el("div","thumbs");
+    const mapImg = el("img");
+    mapImg.src = sp.map_path; mapImg.loading = "lazy"; mapImg.alt = sp.name+" occurrence map";
+    mapImg.addEventListener("click", ()=>openLightbox(sp.map_path, sp.name+" — "+sp.verdict));
+    thumbs.appendChild(mapImg);
+    thumbs.appendChild(imageBlock(sp.image));
+    card.appendChild(thumbs);
+
+    const body = el("div","body");
+    const nameRow = el("div","name-row");
+    nameRow.appendChild(sciName(sp.name_short));
+    nameRow.appendChild(el("span","badge "+sp.verdict, sp.verdict.replace("_"," ")));
+    body.appendChild(nameRow);
+
+    const metaRow = el("div","meta-row");
+    metaRow.appendChild(el("span", null, "GBIF "+sp.gbif+" · OBIS "+sp.obis));
+    metaRow.appendChild(el("span", null, sp.nearest_km!==null ? ("nearest "+sp.nearest_km+" km") : "no records"));
+    metaRow.appendChild(el("span", null, "IUCN "+sp.iucn_code));
+    body.appendChild(metaRow);
+
+    const flags = el("div","flags");
+    ["marine","brackish","freshwater","terrestrial"].forEach(f=>{
+      if(sp.flags[f]) flags.appendChild(el("span","flag-pill", f));
+    });
+    body.appendChild(flags);
+
+    const attrib = attribLine(sp.image);
+    if(attrib) body.appendChild(attrib);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  function renderCandidateCard(cd){
+    const card = el("div","taxon-card candidate-card");
+    card.appendChild(el("div","quarantine-tag", "GENUS-LEVEL HYPOTHESIS — NOT A SPECIES IDENTIFICATION"));
+
+    const thumbs = el("div","thumbs");
+    const panelImg = el("img");
+    panelImg.src = cd.panel_path; panelImg.loading = "lazy"; panelImg.alt = cd.display_name+" candidate panel";
+    panelImg.addEventListener("click", ()=>openLightbox(cd.panel_path, cd.display_name+" — "+cd.plausibility));
+    thumbs.appendChild(panelImg);
+    thumbs.appendChild(imageBlock(cd.image));
+    card.appendChild(thumbs);
+
+    const body = el("div","body");
+    const nameRow = el("div","name-row");
+    nameRow.appendChild(sciName(cd.short_name));
+    nameRow.appendChild(el("span","badge "+cd.plausibility, cd.plausibility.replace("_"," ")));
+    body.appendChild(nameRow);
+
+    const metaRow = el("div","meta-row");
+    metaRow.appendChild(el("span", null, "genus "+cd.genus+" · rank "+cd.rank));
+    metaRow.appendChild(el("span", null, cd.n_records+" records ("+cd.sources+")"));
+    metaRow.appendChild(el("span", null, cd.nearest_km!==null ? ("nearest "+cd.nearest_km+" km") : "no records"));
+    body.appendChild(metaRow);
+
+    const attrib = attribLine(cd.image);
+    if(attrib) body.appendChild(attrib);
+
+    card.appendChild(body);
+    return card;
+  }
+
+  // ---------- species filtering ----------
+  (function wireSpeciesTab(){
+    const grid = document.getElementById("sp-grid");
+    const countLine = document.getElementById("sp-count-line");
+    const vSel = document.getElementById("sp-filter-verdict");
+    const iSel = document.getElementById("sp-filter-iucn");
+    const search = document.getElementById("sp-filter-search");
+    const habitatChips = document.getElementById("sp-filter-habitat");
+
+    const iucnCats = [...new Set(D.species.map(s=>s.iucn_category))].sort();
+    iucnCats.forEach(c=>{
+      const opt = document.createElement("option");
+      opt.value = c; opt.textContent = c;
+      iSel.appendChild(opt);
+    });
+
+    const activeHabitats = new Set();
+    habitatChips.querySelectorAll(".chip").forEach(chip=>{
+      chip.addEventListener("click", ()=>{
+        const f = chip.dataset.flag;
+        if(activeHabitats.has(f)){ activeHabitats.delete(f); chip.classList.remove("on"); }
+        else { activeHabitats.add(f); chip.classList.add("on"); }
+        redraw();
+      });
+    });
+
+    function redraw(){
+      const v = vSel.value, cat = iSel.value, q = search.value.trim().toLowerCase();
+      const filtered = D.species.filter(s=>{
+        if(v && s.verdict!==v) return false;
+        if(cat && s.iucn_category!==cat) return false;
+        if(q && !s.name.toLowerCase().includes(q)) return false;
+        for(const f of activeHabitats) if(!s.flags[f]) return false;
+        return true;
+      });
+      grid.innerHTML = "";
+      filtered.forEach(s=>grid.appendChild(renderSpeciesCard(s)));
+      countLine.textContent = filtered.length+" of "+D.species.length+" species shown";
+    }
+    [vSel, iSel, search].forEach(elm=>elm.addEventListener("input", redraw));
+    redraw();
+  })();
+
+  // ---------- candidate filtering ----------
+  (function wireCandidatesTab(){
+    const grid = document.getElementById("cd-grid");
+    const countLine = document.getElementById("cd-count-line");
+    const pSel = document.getElementById("cd-filter-plaus");
+    const gSel = document.getElementById("cd-filter-genus");
+    const search = document.getElementById("cd-filter-search");
+
+    const genera = [...new Set(D.candidates.map(c=>c.genus))].sort();
+    genera.forEach(g=>{
+      const opt = document.createElement("option");
+      opt.value = g; opt.textContent = g;
+      gSel.appendChild(opt);
+    });
+
+    function redraw(){
+      const p = pSel.value, g = gSel.value, q = search.value.trim().toLowerCase();
+      const filtered = D.candidates.filter(c=>{
+        if(p && c.plausibility!==p) return false;
+        if(g && c.genus!==g) return false;
+        if(q && !c.display_name.toLowerCase().includes(q)) return false;
+        return true;
+      });
+      grid.innerHTML = "";
+      filtered.forEach(c=>grid.appendChild(renderCandidateCard(c)));
+      countLine.textContent = filtered.length+" of "+D.candidates.length+" candidates shown";
+    }
+    [pSel, gSel, search].forEach(elm=>elm.addEventListener("input", redraw));
+    redraw();
+  })();
+
+  // ---------- plotly scattergeo occurrence map ----------
+  (function renderMap(){
+    const bySource = {gbif: {lat:[], lon:[], text:[]}, obis: {lat:[], lon:[], text:[]}};
+    D.ctx_points.forEach(p=>{
+      const bucket = bySource[p.src] || (bySource[p.src] = {lat:[], lon:[], text:[]});
+      bucket.lat.push(p.lat); bucket.lon.push(p.lon); bucket.text.push(p.name);
+    });
+    const colors = {gbif:"#4a7fb5", obis:"#2a9d8f"};
+    const traces = Object.entries(bySource).map(([src, b])=>({
+      type:"scattergeo", mode:"markers", name:src.toUpperCase(),
+      lat:b.lat, lon:b.lon, text:b.text,
+      marker:{size:5, color: colors[src] || "#999", opacity:.65}
+    }));
+
+    if(D.buffer_ring && D.buffer_ring.length){
+      traces.push({
+        type:"scattergeo", mode:"lines", name:"buffer ("+D.meta.buffer_km+" km)",
+        lat: D.buffer_ring.map(r=>r.lat), lon: D.buffer_ring.map(r=>r.lon),
+        line:{color:"#b3720a", width:1.5, dash:"dot"}, hoverinfo:"skip"
+      });
+    }
+
+    traces.push({
+      type:"scattergeo", mode:"markers", name:"detection site",
+      lat:[D.meta.detection_site.lat], lon:[D.meta.detection_site.lon],
+      marker:{symbol:"diamond", size:14, color:"#111"}
+    });
+
+    const bbox = D.meta.bbox;
+    const layout = {
+      margin:{t:10,b:10,l:0,r:0},
+      showlegend:true,
+      legend:{orientation:"h", y:-0.05},
+      geo:{
+        showland:true, landcolor:"#eef1f4", showcountries:true, countrycolor:"#c7cfd8",
+        showocean:true, oceancolor:"#f4f8fb", projection:{type:"natural earth"},
+        lonaxis: bbox ? {range:[bbox[0], bbox[2]]} : undefined,
+        lataxis: bbox ? {range:[bbox[1], bbox[3]]} : undefined,
+      }
+    };
+    Plotly.newPlot("occ-map", traces, layout, {displayModeBar:false, responsive:true});
+  })();
+
+})();
+</script>
+</body>
+</html>
