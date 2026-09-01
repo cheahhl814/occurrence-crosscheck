@@ -204,3 +204,20 @@ Helpers live in bin/lib_viz.R (`habitat_iucn_note`, `iucn_col_for`, `IUCN_TILE_C
   plot_genus_candidates.R exactly (the candidates-only fetch is GBIF-only + 100-row-capped)
 - Outputs report/index.html (~850 KB) + vendor/plotly.min.js; PNG assets referenced relatively, never copied
 
+## v1.8.0 — merged-ring maps + HTML report v2.0.0 (six tabs)
+
+Merged-ring rendering (PLAN §11.13): per-species maps and candidate panels draw the dashed ring at
+--near-km (the concordance threshold, NOT the fetch buffer); occurrences within the ring are solid,
+beyond-ring records are pale/hollow and the map horizon extends to include the nearest beyond-ring
+records, so a DISCORDANT taxon visibly shows "it occurs, but over THERE". Subtitles read
+"X GBIF · Y OBIS within the R km ring · beyond: ... · nearest known record N km". NO_RECORD now means
+absent from GBIF/OBIS globally (world counts), never "absent merely near the site".
+
+HTML report v2.0.0: Overview drops the map/figures (KPIs, SVG charts, verdict table only); Species and
+Genus Candidates each SPLIT into an images tab and a maps tab (six tabs total, all deep-linkable);
+2-column grids with larger fonts; binary light/dark theme toggle (localStorage-persisted, honors
+prefers-color-scheme by default); plotly scattergeo (in-ring solid / beyond-ring pale, ring at ring_km)
+moved to the top of the Species Maps tab. 2024K1: 48 species (18/27/3 — unchanged), candidates now
+45 SUPPORTED / 1 WEAK (fuller OBIS context after refetch; Alepes vari genuinely 39 km — the old
+GBIF-only capped candidates fetch had missed it).
+

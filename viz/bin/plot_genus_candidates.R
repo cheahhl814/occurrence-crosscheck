@@ -83,7 +83,7 @@ haversine_km <- function(lat1, lon1, lat2, lon2) {
 # ---- geodesic buffer ring -----------------------------------------------------
 ring <- local({
   R <- 6371.0088
-  d <- buffer_km / R
+  d <- opt[["near-km"]] / R
   lat0 <- site_lat * pi / 180; lon0 <- site_lon * pi / 180
   brg <- seq(0, 2 * pi, length.out = 73)
   lat2 <- asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(brg))
@@ -135,22 +135,32 @@ for (g in sort(genera)) {
     r <- rows[i, ]
     sp_name <- r$candidate_species
     ctx <- ctx_all[ctx_all$key == r$binomial_key[1], , drop = FALSE]
+    # v2.5.1 merged-ring: ring = concordance threshold = map ring; rows classified
+    # by haversine distance; beyond-ring rows are display evidence only
+    ring_km <- opt[["near-km"]]
     n_gb <- sum(ctx$source == "gbif"); n_ob <- sum(ctx$source == "obis")
-    near <- if (nrow(ctx) > 0) min(vapply(seq_len(nrow(ctx)),
-            function(j) haversine_km(site_lat, site_lon, ctx$decimalLatitude[j], ctx$decimalLongitude[j]),
-            numeric(1))) else Inf
+    if (nrow(ctx) > 0) {
+      ctx$dist_km <- haversine_km(site_lat, site_lon, ctx$decimalLatitude, ctx$decimalLongitude)
+      ctx$in_ring <- !is.na(ctx$dist_km) & ctx$dist_km <= ring_km
+    } else { ctx$dist_km <- numeric(0); ctx$in_ring <- logical(0) }
+    n_ring <- sum(ctx$in_ring); n_beyond <- sum(!ctx$in_ring)
+    near_in <- if (n_ring > 0) min(ctx$dist_km[ctx$in_ring]) else Inf
+    near_out <- if (n_beyond > 0) min(ctx$dist_km[!ctx$in_ring]) else Inf
     if (nrow(ctx) == 0) {
       plaus <- "NO_RECORD"; col_pl <- "#8e44ad"
-      note <- "no GBIF/OBIS records anywhere in the buffer — absence of evidence, never a ranking"
-    } else if (near <= opt[["near-km"]]) {
+      note <- "no GBIF/OBIS records anywhere we looked — absence of evidence, never a ranking"
+    } else if (n_ring > 0) {
       plaus <- "SUPPORTED"; col_pl <- "#1a7a3a"
     } else {
       plaus <- "WEAK"; col_pl <- "#e67e22"
     }
-    near_note <- if (nrow(ctx) > 0) sprintf("nearest known record %.0f km from site", near) else "no context records"
+    near_note <- if (n_ring > 0) sprintf("nearest known record %.0f km from site", near_in)
+                 else if (n_beyond > 0) sprintf("nearest known record %.0f km away — beyond the %s km ring", near_out, format(ring_km, big.mark = ","))
+                 else "no context records"
     hn <- habitat_iucn_note(habitat_m, strip_authors(sp_name))
-    ex <- c(min(ring$decimalLongitude), min(ring$decimalLatitude),
-            max(ring$decimalLongitude), max(ring$decimalLatitude))
+    horizon_km <- min(if (!is.infinite(near_out)) max(3 * ring_km, 1.3 * near_out) else 3 * ring_km, 15000)
+    ex <- c(site_lon - horizon_km / 111 * 1.08, site_lat - horizon_km / 111 * 1.08,
+            site_lon + horizon_km / 111 * 1.08, site_lat + horizon_km / 111 * 1.08)
 
     p <- ggplot() +
       geom_sf(data = rnaturalearth::ne_countries(scale = "medium", returnclass = "sf"),
@@ -158,21 +168,23 @@ for (g in sort(genera)) {
       geom_polygon(data = ring, aes(x = decimalLongitude, y = decimalLatitude),
                    fill = "steelblue", alpha = 0.03, colour = "steelblue",
                    linetype = "dashed", linewidth = 0.5) +
-      { if (nrow(ctx) > 0) geom_point(data = ctx, aes(x = decimalLongitude, y = decimalLatitude),
-              shape = 16, colour = "grey50", size = 1.6, alpha = 0.9) else NULL } +
+      { if (n_beyond > 0) geom_point(data = ctx[!ctx$in_ring, , drop = FALSE], aes(x = decimalLongitude, y = decimalLatitude),
+              shape = 16, colour = "grey75", size = 1.5, alpha = 0.8) else NULL } +
+      { if (n_ring > 0) geom_point(data = ctx[ctx$in_ring, , drop = FALSE], aes(x = decimalLongitude, y = decimalLatitude),
+              shape = 16, colour = "grey30", size = 1.6, alpha = 0.9) else NULL } +
       geom_point(aes(x = site_lon, y = site_lat), shape = 23, fill = "white",
                  colour = "grey20", size = 3.6, stroke = 0.9) +
       coord_sf(xlim = ex[c(1, 3)], ylim = ex[c(2, 4)], expand = FALSE) +
       labs(title = sprintf("%s \u2014 candidate %d of %d: %s", g, r$rank, n_cand, sp_name),
            subtitle = paste(c(sprintf(
-             "GENUS-LEVEL HYPOTHESIS, not a species identification · %s — %s GBIF · %s OBIS records in the %s km buffer · %s",
+             "GENUS-LEVEL HYPOTHESIS, not a species identification · %s — %s GBIF · %s OBIS records within the %s km ring · %s",
              plaus, format(n_gb, big.mark = ","), format(n_ob, big.mark = ","),
-             format(buffer_km, big.mark = ","), near_note),
+             format(ring_km, big.mark = ","), near_note),
              if (nzchar(hn)) paste0("\n", hn) else NULL),
              collapse = ""),
            x = "Longitude", y = "Latitude",
-           caption = sprintf("hollow diamond = detection site (candidate) \u00b7 grey = candidate species' GBIF/OBIS occurrences \u00b7 dashed ring = %s km buffer \u00b7 %s",
-                             format(buffer_km, big.mark = ","), opt_label)) +
+           caption = sprintf("hollow diamond = detection site (candidate) \u00b7 grey = occurrences within the %s km ring \u00b7 pale = beyond the ring \u00b7 dashed ring = concordance threshold \u00b7 %s",
+                             format(ring_km, big.mark = ","), opt_label)) +
       theme_bw(base_size = 10) +
       theme(panel.grid = element_line(colour = "grey92", linewidth = 0.25),
             plot.title = element_text(face = "italic", size = 12),

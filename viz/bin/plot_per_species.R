@@ -95,7 +95,7 @@ n_sites <- nrow(sites)
 # ---- geodesic buffer ring (spherical destination points, 72 bearings) --------
 ring <- local({
   R <- 6371.0088
-  d <- buffer_km / R
+  d <- opt[["near-km"]] / R
   lat0 <- site_lat * pi / 180; lon0 <- site_lon * pi / 180
   brg <- seq(0, 2 * pi, length.out = 73)
   lat2 <- asin(sin(lat0) * cos(d) + cos(lat0) * sin(d) * cos(brg))
@@ -136,26 +136,52 @@ for (nm in species) {
         if (nzchar(im$flag[1]) && im$flag[1] == "by-nc") ", license terms apply" else "",
         im$source[1]) else if (!is.null(im) && nrow(im) > 0) sprintf("No citable photo (%s)", im$flag[1]) else ""
   ctx <- ctx_all[ctx_all$key == binom_key(nm), , drop = FALSE]
+  # v2.5.1 merged-ring semantics: ONE ring = map ring = concordance threshold.
+  # ctx rows are classified by haversine distance to the site: within ring = in-ring
+  # evidence; beyond-ring rows are DISPLAY evidence (they corroborate "the species
+  # exists, but not here" — the DISCORDANT narrative). World counts (occurrence
+  # lookup v2.5.1) make NO_RECORD mean "absent from GBIF/OBIS everywhere we looked".
+  ring_km <- opt[["near-km"]]
+  ctx$dist_km <- haversine_km(site_lat, site_lon, ctx$decimalLatitude, ctx$decimalLongitude)
+  ctx$in_ring <- !is.na(ctx$dist_km) & ctx$dist_km <= ring_km
+  n_ring_gb <- sum(ctx$in_ring & ctx$source == "gbif")
+  n_ring_ob <- sum(ctx$in_ring & ctx$source == "obis")
+  n_beyond  <- sum(!ctx$in_ring)
   e <- counts[[nm]]
   gb <- if (!is.null(e$gbif)) e$gbif else 0L
   ob <- if (!is.null(e$obis)) e$obis else 0L
-  n_cor <- sum(c(gb, ob), na.rm = TRUE)
-  # three categories (geocurate-consistent): corroboration in the buffer is
-  # concordance only if records reach down to the site scale; a species with
-  # records somewhere in-region but none near the site is DISCORDANT; zero
-  # records at all is NO_RECORD — absence of evidence, never a discordance claim
-  near <- if (nrow(ctx) > 0) min(haversine_km(site_lat, site_lon,
-                                              ctx$decimalLatitude, ctx$decimalLongitude)) else Inf
-  if (n_cor == 0) {
+  gb_w <- if (!is.null(e$gbif_world)) e$gbif_world else NA_integer_
+  ob_w <- if (!is.null(e$obis_world)) e$obis_world else NA_integer_
+  n_world <- sum(c(gb_w, ob_w), na.rm = TRUE)
+  n_ring <- n_ring_gb + n_ring_ob
+  near_in <- if (any(ctx$in_ring)) min(ctx$dist_km[ctx$in_ring]) else Inf
+  near_out <- if (any(!ctx$in_ring)) min(ctx$dist_km[!ctx$in_ring]) else Inf
+  has_world <- !is.na(gb_w) || !is.na(ob_w)
+  beyond_note <- if (has_world && n_world > 0) {
+    sprintf("%s GBIF · %s OBIS records beyond the ring",
+            format(max(0L, as.integer(gb_w) - as.integer(gb)), big.mark = ","),
+            format(max(0L, as.integer(ob_w) - as.integer(ob)), big.mark = ","))
+  } else if (n_beyond > 0) sprintf("%d backdrop records beyond the ring", n_beyond) else ""
+  if (has_world && n_world == 0) {
+    verdict <- "NO_RECORD";  col_det <- "#8e44ad"; det_note <- "no GBIF/OBIS records anywhere we looked"
+  } else if (n_ring > 0 || (n_ring == 0 && (gb + ob) > 0 && near_in <= ring_km)) {
+    verdict <- "CONCORDANT"; col_det <- "#2c6ea3"; det_note <- sprintf("nearest known record %.0f km from site", if (any(ctx$in_ring)) near_in else near_out)
+  } else if (!has_world && n_ring == 0 && (gb + ob) == 0 && n_beyond == 0 && nrow(ctx) == 0) {
+    # legacy counts manifest (pre-merged-ring): zero region counts + no rows => NO_RECORD
     verdict <- "NO_RECORD";  col_det <- "#8e44ad"; det_note <- "no GBIF/OBIS records anywhere in the buffer"
-  } else if (near <= opt[["near-km"]]) {
-    verdict <- "CONCORDANT"; col_det <- "#2c6ea3"; det_note <- sprintf("nearest known record %.0f km from site", near)
   } else {
-    verdict <- "DISCORDANT"; col_det <- "#e67e22"; det_note <- sprintf("nearest known record %.0f km away (beyond the %s km site threshold)", near, format(opt[["near-km"]], big.mark = ","))
+    nd <- if (!is.infinite(near_out)) near_out else near_in
+    verdict <- "DISCORDANT"; col_det <- "#e67e22"
+    det_note <- if (!is.infinite(nd)) sprintf("nearest known record %.0f km away — beyond the %s km ring", nd, format(ring_km, big.mark = ","))
+                 else "no records within reach of the site"
   }
 
-  ex <- c(site_lon - buffer_km / 111 * 1.12, site_lat - buffer_km / 111 * 1.12,
-          site_lon + buffer_km / 111 * 1.12, site_lat + buffer_km / 111 * 1.12)
+  # display horizon: always shows the whole ring + the nearest beyond-ring records,
+  # so the DISCORDANT narrative ("it occurs, but over THERE") is visible on the map
+  horizon_km <- if (!is.infinite(near_out)) max(3 * ring_km, 1.3 * near_out) else 3 * ring_km
+  horizon_km <- min(horizon_km, 15000)
+  ex <- c(site_lon - horizon_km / 111 * 1.08, site_lat - horizon_km / 111 * 1.08,
+          site_lon + horizon_km / 111 * 1.08, site_lat + horizon_km / 111 * 1.08)
   crop <- sf::st_bbox(c(xmin = ex[1], ymin = ex[2], xmax = ex[3], ymax = ex[4]), crs = 4326)
   coast <- get_coastline("auto", "medium")
   if (!is.null(coast)) coast <- tryCatch(sf::st_crop(coast, crop), error = function(e) coast)
@@ -174,10 +200,15 @@ for (nm in species) {
     geom_polygon(data = ring, aes(x = decimalLongitude, y = decimalLatitude),
                  fill = "#3498db", alpha = 0.04, colour = "#2c6ea3",
                  linewidth = 0.5, linetype = "dashed") +
-    {if (nrow(ctx) > 0)
-      geom_point(data = ctx, aes(x = decimalLongitude, y = decimalLatitude),
+    {if (nrow(ctx) > 0 && any(!ctx$in_ring))
+      geom_point(data = ctx[!ctx$in_ring, , drop = FALSE], aes(x = decimalLongitude, y = decimalLatitude),
+                 shape = 21, fill = alpha("#c8cfd8", 0.25), colour = "grey55",
+                 size = 1.0, alpha = 0.6, stroke = 0.25)
+      else NULL} +
+    {if (nrow(ctx) > 0 && any(ctx$in_ring))
+      geom_point(data = ctx[ctx$in_ring, , drop = FALSE], aes(x = decimalLongitude, y = decimalLatitude),
                  shape = 21, fill = "#7f8c9c", colour = "grey30",
-                 size = 1.0, alpha = 0.55, stroke = 0.2)
+                 size = 1.1, alpha = 0.6, stroke = 0.2)
       else NULL} +
     geom_point(data = det, aes(x = decimalLongitude, y = decimalLatitude),
                shape = 23, fill = col_det, colour = "black", size = 3.4, stroke = 0.5) +
@@ -196,15 +227,16 @@ for (nm in species) {
       } else NULL } +
     labs(title = nm,
          subtitle = paste(c(sprintf(
-           "%s: %s — %s GBIF · %s OBIS records in the %s km buffer · %s%s",
+           "%s: %s — %s GBIF · %s OBIS records within the %s km ring · %s%s",
            opt_label, verdict,
            format(gb, big.mark = ","), format(ob, big.mark = ","),
-           format(buffer_km, big.mark = ","), det_note, depth_note),
+           format(ring_km, big.mark = ","), det_note, depth_note),
+           if (nzchar(beyond_note)) beyond_note else NULL,
            if (nzchar(hn)) paste0("\n", hn) else NULL), collapse = ""),
          x = "Longitude", y = "Latitude",
          caption = paste(c(
-             sprintf("pink diamond = eDNA detection site · grey = GBIF/OBIS known occurrences · dashed ring = %s km buffer · %s",
-                     format(buffer_km, big.mark = ","), opt_label),
+             sprintf("pink diamond = eDNA detection site · grey = occurrences within the %s km ring · pale = beyond the ring · dashed ring = concordance threshold · %s",
+                     format(ring_km, big.mark = ","), opt_label),
              if (nzchar(photo_credit)) photo_credit else NULL), collapse = " · ")) +
     theme_bw(base_size = 10) +
     theme(panel.grid = element_line(colour = "grey92", linewidth = 0.25),

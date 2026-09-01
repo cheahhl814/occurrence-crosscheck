@@ -48,7 +48,7 @@ from pathlib import Path
 
 import jinja2
 
-VERSION = "1.0.0"
+VERSION = "2.0.0"
 
 VERDICTS = ("CONCORDANT", "DISCORDANT", "NO_RECORD")
 PLAUSIBILITIES = ("SUPPORTED", "WEAK", "NO_RECORD")
@@ -131,6 +131,24 @@ def relpath(out_dir: Path, target: Path) -> str:
     return os.path.relpath(target.resolve(), out_dir.resolve())
 
 
+def resolve_image(images_dir: Path, local_file: str) -> Path | None:
+    """Resolve a manifest local_file against --images-dir robustly.
+
+    local_file is sometimes already relative to the manifest's PARENT (e.g.
+    'images/Acanthopagrus_latus.jpg' with --images-dir .../species-images-poc/images),
+    and sometimes a bare basename. Try the joins in order; first existing wins.
+    """
+    if not local_file:
+        return None
+    cands = [images_dir / local_file,
+             images_dir.parent / local_file,
+             images_dir / Path(local_file).name]
+    for c in cands:
+        if c.is_file():
+            return c
+    return None
+
+
 def build_species(args, params, counts, habitat_rows, image_rows, context_rows, out_dir):
     det_lon, det_lat = params["input_extent"][0], params["input_extent"][1]
     near_km = args.near_km
@@ -155,6 +173,13 @@ def build_species(args, params, counts, habitat_rows, image_rows, context_rows, 
         c = counts[name]
         gbif_n, obis_n = int(c.get("gbif", 0)), int(c.get("obis", 0))
         total = gbif_n + obis_n
+        # v2.5.1 merged-ring semantics (PLAN §11.13): world counts make NO_RECORD mean
+        # "absent from GBIF/OBIS everywhere we looked"; beyond-ring = world − region
+        gbif_w, obis_w = c.get("gbif_world"), c.get("obis_world")
+        has_world = gbif_w is not None or obis_w is not None
+        world_total = (int(gbif_w or 0)) + (int(obis_w or 0))
+        gbif_out = max(0, int(gbif_w) - gbif_n) if gbif_w is not None else None
+        obis_out = max(0, int(obis_w) - obis_n) if obis_w is not None else None
 
         pts = ctx_by_name.get(name, [])
         nearest_km = None
@@ -163,10 +188,14 @@ def build_species(args, params, counts, habitat_rows, image_rows, context_rows, 
             if nearest_km is None or d < nearest_km:
                 nearest_km = d
 
-        if total == 0:
-            verdict = "NO_RECORD"
+        if has_world and world_total == 0:
+            verdict = "NO_RECORD"          # absent from GBIF/OBIS globally
         elif nearest_km is not None and nearest_km <= near_km:
             verdict = "CONCORDANT"
+        elif has_world:
+            verdict = "DISCORDANT"          # occurs somewhere, but not within the ring
+        elif total == 0 and not pts:
+            verdict = "NO_RECORD"          # legacy manifests (no world counts)
         else:
             verdict = "DISCORDANT"
 
@@ -192,9 +221,10 @@ def build_species(args, params, counts, habitat_rows, image_rows, context_rows, 
         img = images_by_name.get(name)
         image_entry = None
         if img and img.get("local_file") and img.get("flag") != "flag-no-image":
-            local = args.images_dir / img["local_file"]
-            image_entry = {
-                "path": relpath(out_dir, local),
+            local = resolve_image(args.images_dir, img["local_file"])
+            if local is not None:
+                image_entry = {
+                    "path": relpath(out_dir, local),
                 "license": img.get("license", ""),
                 "creator": img.get("creator", "") or img.get("rightsHolder", ""),
                 "source": img.get("source", ""),
@@ -217,6 +247,8 @@ def build_species(args, params, counts, habitat_rows, image_rows, context_rows, 
                 "obis": obis_n,
                 "total": total,
                 "nearest_km": round(nearest_km, 1) if nearest_km is not None else None,
+                "gbif_out": gbif_out,
+                "obis_out": obis_out,
                 "map_path": relpath(out_dir, map_path),
                 "habitat": hab.get("habitat", ""),
                 "flags": {
@@ -337,9 +369,9 @@ def finish_candidates(args, params, candidates, habitat_by_display, images_by_di
         hab = habitat_by_display.get(cand["display_name"], {})
         img = images_by_display.get(cand["display_name"])
         if img and img.get("local_file") and img.get("flag") != "flag-no-image":
-            local = args.images_dir / img["local_file"]
+            local = resolve_image(args.images_dir, img["local_file"])
             image_entry = {
-                "path": relpath(out_dir, local),
+                "path": relpath(out_dir, local) if local is not None else None,
                 "license": img.get("license", ""),
                 "creator": img.get("creator", "") or img.get("rightsHolder", ""),
                 "source": img.get("source", ""),
@@ -423,25 +455,32 @@ def main():
         args, params, cand_stage1, habitat_by_display, images_by_display, out_dir
     )
 
+    det_lon, det_lat = params["input_extent"][0], params["input_extent"][1]
+    buffer_km = params.get("buffer", {}).get("km")
+    # ring_km is the *displayed* concordance radius (defaults to the --near-km threshold used
+    # for the CONCORDANT/DISCORDANT call) and may differ from buffer_km, the full data-fetch
+    # radius -- a future params.json may carry an explicit "ring_km" override.
+    ring_km = params.get("ring_km", args.near_km)
+
     ctx_points = []
     counted_names = {s["name"] for s in species}
     for row in context_rows:
         if row["scientificName"] not in counted_names:
             continue
+        d = haversine_km(det_lon, det_lat, float(row["decimalLongitude"]), float(row["decimalLatitude"]))
         ctx_points.append(
             {
                 "name": row["scientificName"],
                 "lat": float(row["decimalLatitude"]),
                 "lon": float(row["decimalLongitude"]),
                 "src": row["source"],
+                "ring": "in" if d <= ring_km else "out",
             }
         )
 
-    det_lon, det_lat = params["input_extent"][0], params["input_extent"][1]
-    buffer_km = params.get("buffer", {}).get("km")
-    ring = []
-    if buffer_km:
-        ring = [{"lon": lo, "lat": la} for lo, la in circle_points(det_lon, det_lat, float(buffer_km))]
+    ring_points = []
+    if ring_km:
+        ring_points = [{"lon": lo, "lat": la} for lo, la in circle_points(det_lon, det_lat, float(ring_km))]
 
     figures = {
         p.stem: relpath(out_dir, p) for p in sorted(args.figures.glob("*.png"))
@@ -452,6 +491,7 @@ def main():
             "realm": params.get("realm", ""),
             "marker": params.get("marker", ""),
             "buffer_km": buffer_km,
+            "ring_km": ring_km,
             "near_km": args.near_km,
             "run": args.params.parent.name,
             "params_path": str(args.params),
@@ -469,7 +509,7 @@ def main():
             "habitat_hist": habitat_hist,
         },
         "ctx_points": ctx_points,
-        "buffer_ring": ring,
+        "ring_points": ring_points,
         "figures": figures,
     }
 

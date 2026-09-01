@@ -103,3 +103,15 @@ See `bin/skill-update-check.py`.
 `preflight.md` (input validation, tool audit, FishBase client decision, ask-user stop-point record,
 §Deviations), `params.json`, `skill-built.md`, `battle-test-report.md` (structural smoke tests +
 realm-matrix battle test with real network-call evidence).
+
+## v2.5.1 — merged-ring occurrence semantics (PLAN §11.13)
+
+ONE ring parameter governs the occurrence analysis (map ring = concordance threshold = --near-km R,
+default 150 km). The old separate fetch-buffer is now an internal data-collection region only.
+- occurrence_lookup.py: optional 5th arg `ring_km` -> primary gbif/obis counts within the RING bbox
+  (input_extent ± R); always adds `gbif_world`/`obis_world` (global count queries). Beyond-ring = world − ring.
+- context_records.py: new `--outside-cap N` -> bounded global sample beyond the context window per species,
+  so maps show where species occur outside the ring. Verdicts: CONCORDANT (record ≤ R) / DISCORDANT (none
+  ≤ R but known beyond — visible on the map) / NO_RECORD (absent from GBIF/OBIS everywhere we looked).
+- Env/WorldClim sampling regions are UNCHANGED (buffer stays an internal env-envelope setting).
+

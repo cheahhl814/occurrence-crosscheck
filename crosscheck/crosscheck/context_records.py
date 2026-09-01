@@ -5,6 +5,8 @@ under the detection points on occurrence maps.
 
 Distinct from occurrence_lookup.py (counts only, limit=0): this fetches actual
 records — capped per species (--per-species, default 150), within a --buffer-km
+ring, PLUS (v2.5.1, --outside-cap N) a bounded global sample BEYOND the window so maps
+can show where species occur outside the ring (merged-ring semantics, PLAN §11.13):
 region (default 500 km) around the input extent. "Database sampling gap at a
 tiny buffer" is exactly the failure 2024K1 exposed, so the context window is
 wider than the crosscheck window BY DEFAULT.
@@ -59,6 +61,44 @@ def records_obis(net: NetLog, name: str, wkt: str, cap: int) -> list[dict]:
         return []
 
 
+def records_gbif_global(net: NetLog, name: str, cap: int) -> list[dict]:
+    """Global (no geometry) GBIF sample for a taxon — the beyond-ring display pool."""
+    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit={min(cap, 300)}"
+    try:
+        r = net.get("gbif", url)
+        r.raise_for_status()
+        return [
+            {
+                "scientificName": name,
+                "decimalLatitude": (x.get("decimalLatitude") if isinstance(x, dict) else None),
+                "decimalLongitude": (x.get("decimalLongitude") if isinstance(x, dict) else None),
+                "year": (x.get("year") or "") if isinstance(x, dict) else "",
+                "source": "gbif",
+            }
+            for x in r.json().get("results", [])
+            if isinstance(x, dict) and x.get("decimalLatitude") is not None
+        ]
+    except Exception:
+        return []
+
+
+def records_obis_global(net: NetLog, name: str, cap: int) -> list[dict]:
+    """Global (no geometry) OBIS sample for a taxon."""
+    url = f"{OBIS_OCC}?scientificname={quote(name)}&size={min(cap, 250)}"
+    try:
+        r = net.get("obis", url)
+        r.raise_for_status()
+        return [
+            {"scientificName": x.get("scientificName", name),
+             "decimalLatitude": x["decimalLatitude"], "decimalLongitude": x["decimalLongitude"],
+             "year": (x.get("eventDate") or x.get("year") or "")[:4] if isinstance(x.get("eventDate") or x.get("year") or "", str) else "",
+             "source": "obis"}
+            for x in r.json().get("results", []) if x.get("decimalLatitude") is not None
+        ]
+    except Exception:
+        return []
+
+
 def main() -> None:
     input_csv, realm, params_path, work_dir = sys.argv[1:5]
     work = Path(work_dir)
@@ -66,6 +106,7 @@ def main() -> None:
 
     buffer_km = 500.0
     cap = 200
+    outside_cap = 0
     # --candidates <genus_candidates.csv> (v2.4.0): fetch backdrop records for the
     # predicted (genus-narrow) candidate species instead of the detected taxa
     argv = sys.argv[5:]
@@ -79,6 +120,8 @@ def main() -> None:
         buffer_km = float(argv[argv.index("--buffer-km") + 1])
     if "--per-species" in argv:
         cap = int(argv[argv.index("--per-species") + 1])
+    if "--outside-cap" in argv:
+        outside_cap = int(argv[argv.index("--outside-cap") + 1])
     out_csv = work.parent / ("candidates_context_occurrences.csv" if candidates_mode
                              else "context_occurrences.csv")
 
@@ -106,7 +149,7 @@ def main() -> None:
     call_obis = realm == "marine"  # realm-router rule, mirrored here without routing.json
 
     net = NetLog(work)
-    out_rows, n_per = [], {}
+    out_rows, n_per, n_out = [], {}, {}
     for name in names:
         gb = records_gbif(net, name, wkt, cap)
         ob = records_obis(net, name, wkt, cap) if call_obis else []
@@ -115,6 +158,20 @@ def main() -> None:
         n_per[name] = {"gbif": len(gb), "obis": len(ob), "kept": min(len(gb) + len(ob), cap)}
         out_rows.extend(merged)
 
+        # v2.5.1 merged-ring semantics: bounded GLOBAL sample beyond the context window,
+        # so maps can show where a species occurs outside the ring (DISCORDANT narrative)
+        # and NO_RECORD means "absent from GBIF/OBIS everywhere we looked".
+        if outside_cap > 0:
+            gbw = records_gbif_global(net, name, outside_cap)
+            obw = records_obis_global(net, name, outside_cap) if call_obis else []
+            # keep only rows outside the in-window bbox (those are already covered above)
+            outs = [r for r in gbw + obw
+                    if r["decimalLatitude"] is not None and r["decimalLongitude"] is not None
+                    and not (ctx[0] <= r["decimalLongitude"] <= ctx[2]
+                             and ctx[1] <= r["decimalLatitude"] <= ctx[3])][:outside_cap]
+            n_out[name] = len(outs)
+            out_rows.extend(outs)
+
     fieldnames = ["scientificName", "decimalLatitude", "decimalLongitude", "year", "source"]
     with open(out_csv, "w", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fieldnames)
@@ -122,9 +179,11 @@ def main() -> None:
         w.writerows(out_rows)
 
     total = sum(v["kept"] for v in n_per.values())
+    out_total = sum(n_out.values()) if outside_cap > 0 else 0
     print(f"context-records: {len(names)} species, buffer {buffer_km:.0f} km -> "
           f"{total} backdrop records ({sum(v['gbif'] for v in n_per.values())} gbif, "
-          f"{sum(v['obis'] for v in n_per.values()) if call_obis else '-'} obis) -> {out_csv}")
+          f"{sum(v['obis'] for v in n_per.values()) if call_obis else '-'} obis) "
+          f"+ {out_total} beyond-window sample records (outside_cap={outside_cap}) -> {out_csv}")
 
 
 if __name__ == "__main__":

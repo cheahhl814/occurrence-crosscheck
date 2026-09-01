@@ -90,4 +90,5 @@ Full histories: `../../../archieved/*.bundle` (verified complete; `git clone <bu
 - `genus-candidates` (viz v1.5.0): predicted species for genus-only ASVs render as quarantined candidate panels (SUPPORTED/WEAK/NO_RECORD) + fig 08 candidate sheet — hypotheses only, never merged into the species verdict layer.
 - `habitat-iucn` (crosscheck v2.5.0): WoRMS habitat flags + GBIF IUCN category per detected and candidate taxon -> viz `--habitat` renders them on maps and both contact sheets (§11.11).
 - `report-html` (viz v1.7.0): one-command self-contained HTML dashboard (KPIs, filters, plotly occurrence map, per-species cards, quarantined candidates section) compiled from the run's manifests — `pixi run report-html ... --out <dir>` (§11.12).
+- Merged-ring semantics (v2.5.1/v1.8.0): one --near-km ring = map ring = concordance threshold; beyond-ring occurrences visible on maps (pale points + global sample), NO_RECORD = globally absent (§11.13).
 
