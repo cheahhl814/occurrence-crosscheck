@@ -24,6 +24,12 @@ option_list <- list(
   make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
   make_option("--overlay", type = "character", default = NULL,
               help = "Context occurrences CSV (passed to the maps worker)"),
+  make_option("--genus-candidates", type = "character", default = NULL,
+              help = "genus_candidates.csv -> quarantined candidate-panel maps (species_maps/genus_candidates/)"),
+  make_option("--candidate-images", type = "character", default = NULL,
+              help = "candidate_images.csv -> genus-candidate contact sheet (fig 08)"),
+  make_option("--candidates-context", type = "character", default = NULL,
+              help = "candidates_context_occurrences.csv -> honest plausibility for candidate panels"),
   make_option("--images", type = "character", default = NULL,
               help = "species_images.csv manifest -> contact sheet (fig 07) + per-species map thumbnails"),
   make_option("--per-species", action = "store_true", default = FALSE,
@@ -102,6 +108,12 @@ if (!is.null(opt$images) && !"contactsheet" %in% phases) {
   phases <- setdiff(phases, "report")
   phases <- c(phases, "contactsheet", "report")  # contact sheet feeds the captions manifest
 }
+if (!is.null(opt[["genus-candidates"]]) && !"genuscandidates" %in% phases) {
+  phases <- setdiff(phases, "report")
+  phases <- c(phases, "genuscandidates", "report")  # quarantined: species_maps/genus_candidates/ only
+}
+if (!is.null(opt[["candidate-images"]]) && !"contactsheet" %in% phases)
+  stop("--candidate-images requires --images (drives the contactsheet phase)", call. = FALSE)
 if (length(phases) == 0) {
   log_msg("preflight-only run complete (no figures requested).")
   quit(status = 0)
@@ -109,6 +121,7 @@ if (length(phases) == 0) {
 ok <- TRUE
 for (ph in phases) {
   script <- switch(ph, maps = "plot_map.R", speciesmaps = "plot_per_species.R", contactsheet = "plot_contact_sheet.R",
+                   genuscandidates = "plot_genus_candidates.R",
                    profiles = "plot_profiles.R", report = "build_report.R",
                    stop(sprintf("unknown phase '%s' (maps | speciesmaps | profiles | report)", ph), call. = FALSE))
     extra <- if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)
@@ -121,9 +134,19 @@ for (ph in phases) {
     if (!is.null(opt$counts)) extra <- c(extra, "--counts", opt$counts)
     if (!is.null(opt$images)) extra <- c(extra, "--images", opt$images)
   }
+  if (ph == "genuscandidates") {
+    extra <- c("--candidates", opt[["genus-candidates"]],
+               "--near-km", format(opt[["near-km"]], digits = 6),
+               "--buffer-km", format(if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else 2000, digits = 8),
+               "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
+    if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
+    if (!is.null(opt[["candidates-context"]])) extra <- c(extra, "--candidates-context", opt[["candidates-context"]])
+    if (!is.null(opt$params)) extra <- c(extra, "--params", opt$params)
+  }
   if (ph == "contactsheet") {
     extra <- c("--images", opt$images,
-               "--input-label", if (!is.null(opt$`input-label`)) opt$`input-label` else "species reference images")
+               "--input-label", if (!is.null(opt$`input-label`)) opt$`input-label` else "species reference images",
+               if (!is.null(opt[["candidate-images"]])) c("--candidate-images", opt[["candidate-images"]]) else character(0))
   }
   ok <- run_phase(ph, script, extra) && ok
 }

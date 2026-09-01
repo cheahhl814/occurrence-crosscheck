@@ -87,3 +87,4 @@ Full histories: `../../../archieved/*.bundle` (verified complete; `git clone <bu
 - [ ] Historical battle-test reports: `*/battle-test-report.md` (v1.0.0 verdicts: PASS / PASS-WITH-WARNINGS / PASS)
 
 - `species-images` (crosscheck v2.3.0): citable per-species photos (iNat-first, GBIF fallback) as a flagged manifest — visualized by the viz sub-skill via `--images` (fig 07 contact sheet + map thumbnails). See PLAN §11.9.
+- `genus-candidates` (viz v1.5.0): predicted species for genus-only ASVs render as quarantined candidate panels (SUPPORTED/WEAK/NO_RECORD) + fig 08 candidate sheet — hypotheses only, never merged into the species verdict layer.

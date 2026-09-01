@@ -153,3 +153,24 @@ Two additions consume the crosscheck `species_images.csv` manifest (PLAN §11.9)
 Licence policy: cc-best (CC0/CC-BY(-SA)) preferred; by-nc allowed for internal reports;
 all-rights-reserved and unlicensed images are excluded from embeds in the fetcher upstream.
 Standalone workers: `pixi run -e default -- Rscript bin/plot_contact_sheet.R --images <csv> --outdir <out>`.
+
+## v1.5.0 — genus-candidate panels + fig 08 (quarantined candidate layer)
+
+For genus-only ASV groups (crosscheck genus-narrow), viz can render PREDICTED
+species panels — quarantined by design: they never enter the species verdict
+layer (no CONCORDANT/DISCORDANT words, no ledger verdict counts, separate
+`species_maps/genus_candidates/` directory).
+
+- `pixi run -e default -- Rscript bin/viz_run.R ... --genus-candidates <genus_candidates.csv> --candidates-context <candidates_context_occurrences.csv>`
+  runs the `genuscandidates` phase (`bin/plot_genus_candidates.R`): per candidate
+  (top-N, default 3 per genus) a panel map with a HOLLOW detection diamond and a
+  plausibility label **SUPPORTED** (nearest record <= --near-km) / **WEAK**
+  (in-region but distant) / **NO_RECORD** (zero records — absence of evidence).
+  Requires `--candidates-context` (fetched upstream by
+  `context_records.py --candidates <genus_candidates.csv>`): without the
+  candidates' OWN context records every candidate would falsely read NO_RECORD
+  (the detected-taxa context file only covers detected species).
+- `--candidate-images <candidate_images.csv>` renders fig
+  **08_genus_candidates_sheet** (bin/plot_contact_sheet.R): photos labelled
+  "candidate of <genus>, rank n" — hypotheses for the review queue, NOT species
+  identifications.

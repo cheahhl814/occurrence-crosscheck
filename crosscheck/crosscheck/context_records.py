@@ -63,15 +63,24 @@ def main() -> None:
     input_csv, realm, params_path, work_dir = sys.argv[1:5]
     work = Path(work_dir)
     work.mkdir(parents=True, exist_ok=True)
-    out_csv = work.parent / "context_occurrences.csv"
 
     buffer_km = 500.0
     cap = 200
+    # --candidates <genus_candidates.csv> (v2.4.0): fetch backdrop records for the
+    # predicted (genus-narrow) candidate species instead of the detected taxa
     argv = sys.argv[5:]
+    candidates_mode = "--candidates" in argv
+    candidates_path = None
+    if candidates_mode:
+        i = argv.index("--candidates")
+        candidates_path = Path(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
     if "--buffer-km" in argv:
         buffer_km = float(argv[argv.index("--buffer-km") + 1])
     if "--per-species" in argv:
         cap = int(argv[argv.index("--per-species") + 1])
+    out_csv = work.parent / ("candidates_context_occurrences.csv" if candidates_mode
+                             else "context_occurrences.csv")
 
     params = json.loads(Path(params_path).read_text())
     extent = params.get("input_extent") or params["bbox"]
@@ -82,8 +91,17 @@ def main() -> None:
     wkt = (f"POLYGON(({ctx[0]} {ctx[1]},{ctx[2]} {ctx[1]},{ctx[2]} {ctx[3]},"
            f"{ctx[0]} {ctx[3]},{ctx[0]} {ctx[1]}))")
 
-    with open(input_csv) as f:
-        names = sorted({r["scientificName"].strip() for r in csv.DictReader(f) if r.get("scientificName")})
+    if candidates_mode:
+        cand_binoms = {}
+        for r in csv.DictReader(open(candidates_path, newline="")):
+            display = (r.get("candidate_species") or "").strip()
+            if display:
+                binom = " ".join(display.split()[:2])  # strip author citation
+                cand_binoms[binom] = True
+        names = sorted(cand_binoms)
+    else:
+        with open(input_csv, newline="") as f:
+            names = sorted({r["scientificName"].strip() for r in csv.DictReader(f) if r.get("scientificName")})
 
     call_obis = realm == "marine"  # realm-router rule, mirrored here without routing.json
 

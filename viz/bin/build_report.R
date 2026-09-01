@@ -171,6 +171,9 @@ report <- c(report,
   "- Multi-panel figure assembled with patchwork from per-figure ggplot snapshots (work/plots/*.rds).",
   "- PNG at 300 dpi + vector PDF per pinned output contract; add `svg` to `output_formats` (requires svglite) at run preflight if wanted.",
   sprintf("- captions manifest: `fig/figure-captions.md`", ""),
+    "08_genus_candidates_sheet" = sprintf("**Figure %d.** Genus-narrow candidate species predicted for genus-only ASV groups: %s candidate photos, %s flagged. Quarantined candidate imagery — tiles are labelled with the genus and rank; these are hypotheses for the review queue, NOT species identifications, and never enter the verdict counts of figures 01-07.",
+                                  fig_num, ifelse(is.na(exg("n_candidates")), "?", exg("n_candidates")),
+                                  ifelse(is.na(exg("n_flagged")), "?", exg("n_flagged"))),
   "")
 writeLines(report, file.path(opt$outdir, "figure-report.md"))
 

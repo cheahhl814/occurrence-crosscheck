@@ -62,6 +62,26 @@ SPDX_BY_URL = {
 MANIFEST_FIELDS = ["scientificName", "source", "image_url", "local_file", "bytes", "license",
                    "license_url", "creator", "rightsHolder", "attribution", "occurrence_url",
                    "flag", "fetched_at"]
+CANDIDATE_COLS = ["candidate_of", "candidate_rank", "candidate_display"]
+CANDIDATE_FIELDS = MANIFEST_FIELDS + CANDIDATE_COLS  # candidate_images.csv = §11.10
+
+
+def load_candidates(candidates_csv: Path) -> list[dict]:
+    """genus_candidates.csv rows -> per-candidate image targets (binomial keys,
+    display name with author citation kept for the caption)."""
+    out: dict[str, dict] = {}
+    for r in csv.DictReader(open(candidates_csv, newline="")):
+        display = (r.get("candidate_species") or "").strip()
+        if not display:
+            continue
+        binom = " ".join(display.split()[:2])
+        g = (r.get("genus") or "").strip()
+        if binom.lower() in out:
+            continue
+        out[binom.lower()] = {"scientificName": binom, "candidate_of": g,
+                              "candidate_rank": r.get("rank", ""),
+                              "candidate_display": display}
+    return list(out.values())
 
 RESTRICTED_RANK = {"cc-best": 0, "by-nc": 1, "flag-no-license": 2, "flag-all-rights-reserved": 3,
                    "flag-no-image": 4}
@@ -213,10 +233,23 @@ def read_species(list_path: Path) -> tuple[list[str], set[str]]:
 
 def main() -> None:
     args = [a for a in sys.argv[1:] if not a.startswith("--")]
+    kwargs = {}
+    argv = sys.argv[1:]
+    if "--candidates" in argv:
+        i = argv.index("--candidates")
+        kwargs["candidates_csv"] = Path(argv[i + 1])
+        argv = argv[:i] + argv[i + 2:]
+    args = [a for a in argv]
     if len(args) < 2:
         print(__doc__)
         sys.exit(2)
     list_path, work_dir = Path(args[0]), Path(args[1])
+    candidates_csv = kwargs.get("candidates_csv")
+
+    if candidates_csv is not None:
+        candidates_run(candidates_csv, work_dir)
+        return
+
     names, ambiguous = read_species(list_path)
     (work_dir / "images").mkdir(parents=True, exist_ok=True)
     net = NetLog(work_dir)
@@ -284,6 +317,82 @@ def main() -> None:
     n_img = sum(1 for r in rows if r.get("local_file"))
     n_flag = sum(1 for r in rows if str(r.get("flag", "")).startswith("flag"))
     print(f"species-images: {len(rows)} species processed, {n_img} images cached, {n_flag} flagged -> {manifest}")
+
+
+def candidates_run(candidates_csv: Path, work_dir: Path) -> None:
+    """--candidates mode: fetch photos for predicted (genus-narrow) candidate species.
+
+    Writes candidate_images.csv (= species_images layout + candidate_of /
+    candidate_rank / candidate_display, §11.10). Cache-warm safe: reuses rows whose
+    local file still exists; shares the images/ cache with species_images runs.
+    """
+    (work_dir / "images").mkdir(parents=True, exist_ok=True)
+    net = NetLog(work_dir)
+    targets = load_candidates(candidates_csv)
+    manifest = work_dir / "candidate_images.csv"
+    prev: dict[str, dict] = {}
+    if manifest.exists():
+        try:
+            for r in csv.DictReader(open(manifest)):
+                if r.get("local_file") and (work_dir / r["local_file"]).exists():
+                    prev[r["scientificName"].lower()] = {k: r.get(k, "") for k in CANDIDATE_FIELDS}
+        except Exception:
+            prev = {}
+
+    rows: list[dict] = []
+    for t in targets:
+        key = t["scientificName"].lower()
+        cached = prev.get(key)
+        if cached:
+            rows.append(cached)
+            continue
+        rec = from_inat(net, t["scientificName"])
+        if rec is not None:
+            code = rec["license"].lower()
+            if not code.startswith("cc"):
+                gb = from_gbif(net, t["scientificName"])
+                if gb is not None and license_flag(gb["license_url"]) in ("cc-best", "by-nc"):
+                    rec = gb
+                else:
+                    rec["flag"] = "flag-all-rights-reserved" if ARR_RE.search(rec["creator"] or "") else "flag-no-license"
+        else:
+            rec = from_gbif(net, t["scientificName"])
+        if rec is None:
+            rec = _blank(t["scientificName"])
+        if rec["image_url"]:
+            source_code = rec["license"] if rec["source"] == "inaturalist" else ""
+            flag = license_flag(rec["license_url"], source_code)
+            rec["flag"] = flag
+            if flag not in ("flag-all-rights-reserved", "flag-no-license"):
+                data = _img_bytes(net, rec["image_url"])
+                if data:
+                    rel = f"images/{_slug(t['scientificName'])}.jpg"
+                    (work_dir / rel).write_bytes(data)
+                    rec["local_file"], rec["bytes"] = rel, len(data)
+        else:
+            rec["flag"] = FLAG_NO_IMAGE
+        rec["fetched_at"] = datetime.now(timezone.utc).isoformat(timespec="seconds")
+        rec.setdefault("candidate_of", t["candidate_of"])
+        rec.setdefault("candidate_rank", t["candidate_rank"])
+        rec.setdefault("candidate_display", t["candidate_display"])
+        rows.append(rec)
+        time.sleep(0.05)
+
+    if any(r.get("candidate_of") == "" and r.get("flag", "").startswith("flag") for r in rows) is False and rows:
+        for r, t in zip(rows, targets):
+            r.setdefault("candidate_of", t["candidate_of"])
+            r.setdefault("candidate_rank", t["candidate_rank"])
+            r.setdefault("candidate_display", t["candidate_display"])
+
+    with open(manifest, "w", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=CANDIDATE_FIELDS, extrasaction="ignore")
+        w.writeheader()
+        for r in rows:
+            w.writerow({k: r.get(k, "") for k in CANDIDATE_FIELDS})
+    n_img = sum(1 for r in rows if r.get("local_file"))
+    n_flag = sum(1 for r in rows if str(r.get("flag", "")).startswith("flag"))
+    print(f"candidate-images: {len(rows)} candidates processed, {n_img} images cached, "
+          f"{n_flag} flagged -> {manifest}")
 
 
 if __name__ == "__main__":
