@@ -1,5 +1,5 @@
 [workspace]
-authors = ["AiX-BIO Agent <cheahhl814@gmail.com>"]
+authors = ["AIx-BIO <noreply@aix-bio.example>"]
 channels = ["conda-forge", "bioconda", "anaconda"]
 name = "edna-crosscheck"
 platforms = ["linux-64"]

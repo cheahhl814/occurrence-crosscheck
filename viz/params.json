@@ -14,8 +14,8 @@
     "eDNA occurrence figures",
     "realm-aware occurrence viz"
   ],
-  "run_dir": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills/occurrence-viz",
-  "skills_root": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills",
+  "run_dir": "<occurrence-viz-install-path>",
+  "skills_root": "<AI-x-BIO-skills-checkout>",
   "github_org": "cheahhl814",
   "github_repo": "github.com/cheahhl814/occurrence-viz",
   "skill_shape": "multi-tool-pipeline",

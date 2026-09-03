@@ -77,7 +77,7 @@ When `BEHIND-BY-N`, re-deploy per AGENTS.md §4a:
 
 ```bash
 rsync -a --exclude='.git' \
-    ~/claude_workspace/bioinformatics/AIx-BIO/skills/occurrence-viz/ \
+    <occurrence-viz-source>/ \
     ~/.pi/agent/skills/occurrence-viz/
 diff -rq <src> <dst> --exclude='.git'   # verify zero drift
 ```

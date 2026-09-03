@@ -11,3 +11,10 @@ viz_out/
 test/output/
 docs-corpus/.fingerprints/
 .env
+
+# Preflight + battle-test session output (regenerated locally each run;
+# contains personal-machine paths).
+preflight.md
+preflight_evidence.txt
+battle-test-report*.md
+debug-report*.md

@@ -1,6 +1,6 @@
 {
   "skill_name": "occurrence-publish",
-  "run_dir": "/home/cheahhl814/claude_workspace/bioinformatics/AIx-BIO/skills/occurrence-publish",
+  "run_dir": "<occurrence-publish-install-path>",
   "phase": "3 of the marine-edna meta-skill stack (PLAN-marine-edna-meta-skill.md §6)",
   "skill_shape": "multi-tool-pipeline",
   "primary_language": "python>=3.11",
