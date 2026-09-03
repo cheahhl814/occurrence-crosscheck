@@ -40,14 +40,46 @@ def gbif_basis_of_record_qs() -> str:
 
 def obis_basis_of_record_ok(basis_of_record: str | None) -> bool:
     """True if an OBIS record's basisOfRecord passes OBIS_BASIS_OF_RECORD.
-    ponytail: OBIS's /v3/occurrence endpoint silently ignores any basisOfRecord
-    query param (all casings/formats tried, live-verified 2026-09-03) — ergo
-    this filter is applied client-side to individual records, not server-side.
-    It therefore only applies where full records are fetched (context_records.py);
-    OBIS's count-only endpoints (size=0/1, total field) can't be filtered this
-    way without turning an exact count into a capped sample, so those stay
-    unfiltered by basisOfRecord — see occurrence_lookup.py / range_lookup.py."""
+    OBIS's /v3/occurrence endpoint silently ignores any basisOfRecord query
+    param (all casings/formats tried, live-verified 2026-09-03) — this filter
+    is applied client-side to individual records instead. See
+    obis_filtered_count() for the count-only case."""
     return (basis_of_record or "").strip().lower() in OBIS_BASIS_OF_RECORD
+
+# OBIS returns a full page of up to this many records in one request (live-
+# verified: size=10000 for a taxon with total=1130 returned all 1130 in one
+# call) — used as the post-retrieval-filter cap in obis_filtered_count().
+OBIS_COUNT_FILTER_CAP = 10000
+
+
+def obis_filtered_count(net: "NetLog", base_url: str) -> int | None:
+    """basisOfRecord-filtered OBIS occurrence count, post-retrieval (mirrors the
+    fix in workflows/obis-gbif-fetch/scripts/fetch_obis.py): OBIS's total field
+    has no server-side basisOfRecord filter, so this fetches a cheap size=0 raw
+    total first, then — only if that's > 0 — one page of up to
+    OBIS_COUNT_FILTER_CAP full records, filtered client-side via
+    obis_basis_of_record_ok().
+    ponytail: exact for any species whose raw (unfiltered) total is <=
+    OBIS_COUNT_FILTER_CAP; an undercount above it (OBIS's /v3/occurrence has no
+    documented basisOfRecord filter to paginate around instead). Upgrade path:
+    offset-paginate past the cap if a report shows a suspiciously round
+    near-cap count for a very common species.
+    `base_url` must not already include `size`; a taxon/geometry query only.
+    """
+    try:
+        r = net.get("obis", f"{base_url}&size=0")
+        r.raise_for_status()
+        raw_total = r.json().get("total")
+    except Exception:
+        return None
+    if not raw_total:
+        return raw_total  # 0 or None — nothing to fetch/filter
+    try:
+        r = net.get("obis", f"{base_url}&size={min(raw_total, OBIS_COUNT_FILTER_CAP)}")
+        r.raise_for_status()
+        return sum(1 for x in r.json().get("results", []) if obis_basis_of_record_ok(x.get("basisOfRecord")))
+    except Exception:
+        return None
 
 
 class NetLog:

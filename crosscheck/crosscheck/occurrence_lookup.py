@@ -15,8 +15,10 @@ Writes: <work_dir>/occurrence_counts.json
 
 v2.5.1 merged-ring semantics (PLAN §11.13): the occurrence ring (--near-km R) is BOTH the
 map ring and the concordance threshold. Counts are computed twice per source: within the
-region bbox (in-ring evidence, exact count query) and globally (world, exact count query).
-"Beyond the ring" = world − region. Consumers (viz, report) derive:
+region bbox (in-ring evidence) and globally (world). Both are basisOfRecord-filtered (v1.0.2/
+v1.0.3): GBIF counts are exact server-side filtered queries; OBIS counts are exact for any
+species with <= OBIS_COUNT_FILTER_CAP raw records, an undercount above that (see
+netlog.obis_filtered_count). "Beyond the ring" = world − region. Consumers (viz, report) derive:
   CONCORDANT if region count > 0 · DISCORDANT if region == 0 but world > 0 ·
   NO_RECORD if world == 0 (absent from GBIF/OBIS everywhere we looked).
 """
@@ -27,7 +29,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from netlog import NetLog, gbif_basis_of_record_qs  # noqa: E402
+from netlog import NetLog, gbif_basis_of_record_qs, obis_filtered_count  # noqa: E402
 
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
 OBIS_OCC = "https://api.obis.org/v3/occurrence"
@@ -50,20 +52,14 @@ def gbif_count(net: NetLog, name: str, bbox: list[float] | None) -> int | None:
 
 
 def obis_count(net: NetLog, name: str, bbox: list[float] | None) -> int | None:
-    # ponytail: not basisOfRecord-filtered — see range_lookup.py's obis_count
-    # for why (OBIS ignores the param server-side; this is a total-only count).
-    url = f"{OBIS_OCC}?scientificname={quote(name)}&size=1"
+    """basisOfRecord-filtered OBIS occurrence count — see obis_filtered_count()."""
+    url = f"{OBIS_OCC}?scientificname={quote(name)}"
     if bbox is not None:
         min_lon, min_lat, max_lon, max_lat = bbox
         geometry = (f"POLYGON(({min_lon} {min_lat},{max_lon} {min_lat},{max_lon} {max_lat},"
                     f"{min_lon} {max_lat},{min_lon} {min_lat}))")
         url += f"&geometry={quote(geometry)}"
-    try:
-        r = net.get("obis", url)
-        r.raise_for_status()
-        return r.json().get("total")
-    except Exception:
-        return None
+    return obis_filtered_count(net, url)
 
 
 def main() -> None:

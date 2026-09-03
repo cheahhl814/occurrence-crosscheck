@@ -1,7 +1,7 @@
 ---
 name: edna-crosscheck
 description: 'Cross-checks eDNA occurrence observations (from nf-edna/nf-edna-nanopore ASV tables) against GBIF/OBIS/WoRMS/FishBase taxonomic backbones and Bio-ORACLE/WorldClim-CHELSA environmental envelopes, realm-aware (marine/freshwater/terrestrial). Phase 1 of a 3-skill eDNA meta-stack (PLAN-marine-edna-meta-skill.md). Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv — flags, never silently drops records. Use when the user asks to "cross-check eDNA results", "validate ASV table against GBIF/OBIS", "QC eDNA occurrences", or "ground-truth eDNA detections".'
-version: 1.0.2
+version: 1.0.3
 updated: "2026-09-03"
 triggers:
   - "cross-check eDNA results"
@@ -185,7 +185,27 @@ toward a CONCORDANT/DISCORDANT verdict.
   intentionally bogus value returned the identical total as no filter at all). Where full OBIS records
   are fetched (`context_records.py`), the filter is applied client-side against each record's
   `basisOfRecord` field instead. OBIS's count-only calls (`size=0`/`size=1`, total field, in
-  `occurrence_lookup.py`/`range_lookup.py`) can't be filtered this way without turning an exact count
-  into a capped sample, so those stay basisOfRecord-unfiltered — marked with a `ponytail:` comment
-  at each call site naming the ceiling (GBIF's world/region counts alongside them ARE filtered).
+  `occurrence_lookup.py`/`range_lookup.py`) initially stayed basisOfRecord-unfiltered for this
+  reason — since fixed properly, see v1.0.3 below.
+
+## v1.0.3 — post-retrieval basisOfRecord filter for OBIS's count-only calls
+
+Closes the gap v1.0.2 left open: `occurrence_lookup.py`'s and `range_lookup.py`'s `obis_count()`
+now ARE basisOfRecord-filtered, mirroring the fix already applied to
+`workflows/obis-gbif-fetch/scripts/fetch_obis.py`/`fetch_unified.py` (fetch full records, filter
+client-side, since OBIS ignores the query param server-side).
+
+- `lib/netlog.py` gains `obis_filtered_count(net, base_url)`: a cheap `size=0` call gets the raw
+  (unfiltered) total first; only if that's `> 0` does it fetch one page of up to
+  `OBIS_COUNT_FILTER_CAP` (10000) full records and count how many pass `obis_basis_of_record_ok()`.
+  Species with zero raw records (common — most NO_RECORD/DISCORDANT verdicts) still cost only the
+  one cheap request, same as before.
+- `ponytail:` this is exact for any species whose raw total is ≤ 10000 (OBIS live-verified to
+  return a full page that size in one request) and an undercount above it — there's no
+  basisOfRecord-aware pagination to fall back on. Upgrade path: offset-paginate past the cap if a
+  report shows a suspiciously round near-cap count for a very common species.
+- Live-verified against *Chiloscyllium punctatum* (world count, no bbox): raw total 1130 → filtered
+  695 (`obis_count()`'s result matched an independent manual count of the same records byte-for-byte).
+- Both `occurrence_lookup.py`'s and `range_lookup.py`'s `obis_count()` are now one-line wrappers
+  around `obis_filtered_count()`.
 
