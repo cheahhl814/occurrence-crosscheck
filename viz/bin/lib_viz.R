@@ -135,6 +135,31 @@ get_coastline <- function(coast_choice = "auto", scale = "medium") {
   } else NULL
 }
 
+#' Crop coastline polygons to bbox, guarding a confirmed sf 1.1.2 bug: when the
+#' bbox longitude span exceeds 180 deg, st_crop()/st_intersection() misread it
+#' as antimeridian-crossing and silently drop most/all continents (st_area of
+#' the result can be <5% of the true intersecting area) even though no error
+#' is raised. st_intersects() (predicate only) is unaffected, so use it to
+#' select features and skip the buggy clip for wide boxes instead of risking
+#' silent data loss.
+safe_crop_coast <- function(coast, bbox) {
+  if (is.null(coast)) return(NULL)
+  keep <- lengths(sf::st_intersects(coast, sf::st_as_sfc(bbox))) > 0
+  cw <- coast[keep, , drop = FALSE]
+  span <- unname(bbox["xmax"] - bbox["xmin"])
+  if (is.na(span) || span > 180) {
+    if (!is.na(span) && span > 180) warn_msg(sprintf(
+      "bbox longitude span %.0f deg > 180; st_crop() silently drops large polygons at this span (known sf bug) — using unclipped intersecting features instead.",
+      span))
+    return(cw)
+  }
+  tryCatch(sf::st_crop(cw, bbox), error = function(e) cw)
+}
+
+#' Wrap long title/subtitle text onto multiple lines so it doesn't bleed past
+#' the plot edge — ggplot2 does not auto-wrap plot.title/subtitle text.
+wrap_title <- function(txt, width = 62) paste(strwrap(txt, width = width), collapse = "\n")
+
 # ------------------------------------------------------------------ run config
 
 #' Read + validate the realm run config (config/run-config.<realm>.json).

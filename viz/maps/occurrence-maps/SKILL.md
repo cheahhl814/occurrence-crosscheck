@@ -1,7 +1,7 @@
 ---
 name: occviz-occurrence-maps
 description: 'Species occurrence maps for DwC-shaped occurrence tables (occurrence-viz maps/ sub-skill, PLAN-marine-edna-meta-skill.md §5). rnaturalearth basemap (medium via rnaturalearthdata) with the AMPLICON geocurate_inventory.R fallback chain (maps::map("world") → bare frame), fixed-seed (42) point subsampling to map_points_max, per-species facet small-multiples, realm-agnostic colouring from run config. 300-dpi PNG + vector PDF outputs. Triggers: "occurrence map eDNA", "plot gbif obis records", "species occurrence map".'
-version: 1.0.0
+version: 1.0.2
 updated: "2026-08-31"
 triggers:
   - "occurrence map eDNA"

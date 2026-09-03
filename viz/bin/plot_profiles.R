@@ -69,11 +69,11 @@ render_profile <- function(x_col, x_label, out_stub) {
       labs(y = "records")
   }
   p <- p + labs(x = if (!is.null(prof_cfg$x_label)) prof_cfg$x_label else x_col,
-                title = sprintf("%s distribution of occurrences%s",
+                title = wrap_title(sprintf("%s distribution of occurrences%s",
                                 if (!is.null(prof_cfg$figure_title)) prof_cfg$figure_title else "Depth profile",
-                                if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`)),
-                subtitle = sprintf("%s records with '%s' values · realm: %s",
-                                   format(sum(ok), big.mark = ","), x_col, cfg$realm)) +
+                                if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`))),
+                subtitle = wrap_title(sprintf("%s records with '%s' values · realm: %s",
+                                   format(sum(ok), big.mark = ","), x_col, cfg$realm))) +
     theme_bw(base_size = 11) + theme(panel.grid.minor = element_blank())
   if (isTRUE(prof_cfg$reverse_y)) p <- p + scale_y_reverse()  # depth increases downward
 
@@ -129,9 +129,9 @@ if (length(env_present) > 0) {
       geom_jitter(data = long, aes(x = scientificName, y = value), width = 0.12, size = 0.4,
                   alpha = 0.25, colour = "#e76f51", inherit.aes = FALSE) +
       coord_flip() + facet_wrap(~variable, scales = "free_x") +
-      labs(title = sprintf("Environmental envelopes per species%s",
-                           if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`)),
-           subtitle = "points = records, pointrange = mean ± 95% CI (ENVELOPE context; flags computed upstream in edna-crosscheck — viz plots observations, it never flags)",
+      labs(title = wrap_title(sprintf("Environmental envelopes per species%s",
+                           if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`))),
+           subtitle = wrap_title("points = records, pointrange = mean ± 95% CI (ENVELOPE context; flags computed upstream in edna-crosscheck — viz plots observations, it never flags)"),
            x = NULL, y = if (!is.null(prof_cfg$envelope_label)) prof_cfg$envelope_label else "value") +
       theme_bw(base_size = 11) + theme(axis.text.y = element_text(face = "italic", size = 8))
     fig04 <- tryCatch({
@@ -169,7 +169,7 @@ if (!is.null(t_trophic) && (!is.null(t_depth) || !is.null(t_size))) {
   if (nrow(d5) >= 5) {
     p5 <- ggplot(d5, aes(x = .data[[x_col_t]], y = .data[[t_trophic]])) +
       geom_jitter(width = 0.02, height = 0.02, size = 1.1, alpha = 0.5, colour = "#2a6f97") +
-      labs(title = "Trait space (FishBase traits via edna-crosscheck enriched table)",
+      labs(title = wrap_title("Trait space (FishBase traits via edna-crosscheck enriched table)"),
            subtitle = x_col_t, x = x_col_t, y = t_trophic) +
       theme_bw(base_size = 11) + theme(legend.position = "bottom")
     fig05 <- tryCatch({

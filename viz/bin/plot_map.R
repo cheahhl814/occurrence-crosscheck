@@ -84,7 +84,7 @@ coast <- get_coastline(coast_choice = if (!is.null(map_cfg$coastline)) map_cfg$c
 base_layer <- function() {
   l <- list()
   if (!is.null(coast)) {
-    cw <- tryCatch(sf::st_crop(coast, crop_bbox), error = function(e) coast)
+    cw <- safe_crop_coast(coast, crop_bbox)
     l[[length(l) + 1]] <- geom_sf(data = cw, fill = "grey90", colour = "grey55", size = 0.2)
   }
   l
@@ -105,12 +105,12 @@ p_overview <- ggplot() +
                              colour = .data[[sp_name]]), size = 1.6, alpha = 0.85) +
   fill_scale +
   coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
-  labs(title = sprintf("Occurrence records%s%s",
+  labs(title = wrap_title(sprintf("Occurrence records%s%s",
                        if (sub$subsampled) sprintf(" (subsampled %s of %s)", format(nrow(dfp), big.mark = ","), format(sub$n_original, big.mark = ",")) else "",
-                       if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`)),
-       subtitle = sprintf("%s species · %s points%s · realm: %s", n_species, format(nrow(dfp), big.mark = ","),
+                       if (is.null(opt$`input-label`)) "" else paste0(" — ", opt$`input-label`))),
+       subtitle = wrap_title(sprintf("%s species · %s points%s · realm: %s", n_species, format(nrow(dfp), big.mark = ","),
                    if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0) sprintf(" · overlay: %s context records (GBIF/OBIS)", format(nrow(dfp_overlay), big.mark = ",")) else "",
-                   cfg$realm),
+                   cfg$realm)),
        x = "Longitude", y = "Latitude", colour = "Species") +
   theme_viz + theme(legend.position = "none")
 
@@ -148,7 +148,8 @@ if (nrow(sp_counts) > 1) {
     dir.create(file.path(opt$outdir, "work", "plots"), recursive = TRUE, showWarnings = FALSE)
     saveRDS(p_facet, file.path(opt$outdir, "work", "plots", "02_species_maps.rds"))
     figure_status(opt$outdir, "02_species_maps", "rendered",
-                  extra = list(species = keep_sps, outputs = out_files))
+                  extra = list(species = keep_sps, n_species = length(keep_sps),
+                               points = nrow(dfs), outputs = out_files))
     TRUE
   }, error = function(e) { figure_status(opt$outdir, "02_species_maps", "skipped", e$message); FALSE })
 } else {
@@ -156,9 +157,36 @@ if (nrow(sp_counts) > 1) {
                 sprintf("only %d distinct species; single-species map redundant with overview", n_species))
 }
 
+# ---- per-species map files: one file per species (default on; opt out via
+# map.per_species_files: false in the run config) — separate from fig02's
+# combined small-multiples panel, which stays for backwards-compatible overview use.
+n_per_species <- 0
+if (!identical(map_cfg$per_species_files, FALSE)) {
+  per_dir <- file.path(opt$outdir, "fig", "per_species")
+  dir.create(per_dir, recursive = TRUE, showWarnings = FALSE)
+  slug <- function(x) gsub("[^A-Za-z0-9._-]+", "_", x)
+  for (nm in sort(unique(na.omit(dfp[[sp_name]])))) {
+    dsp <- dfp[dfp[[sp_name]] == nm, , drop = FALSE]
+    p_sp <- ggplot() +
+      base_layer() +
+      geom_point(data = dsp, aes(x = decimalLongitude, y = decimalLatitude),
+                 colour = "#1f77b4", size = 1.4, alpha = 0.75) +
+      coord_sf(xlim = xlim, ylim = ylim, expand = FALSE) +
+      labs(title = wrap_title(nm),
+           subtitle = sprintf("%s record%s", format(nrow(dsp), big.mark = ","), if (nrow(dsp) == 1) "" else "s"),
+           x = "Longitude", y = "Latitude") +
+      theme_viz + theme(plot.title = element_text(face = "italic"))
+    out_files <- save_fig(p_sp, file.path(per_dir, slug(nm)), formats = formats, width = 7, height = 5.5)
+    figure_status(opt$outdir, sprintf("per_species_%s", slug(nm)), "rendered",
+                  extra = list(species = nm, points = nrow(dsp), outputs = out_files))
+    n_per_species <- n_per_species + 1
+  }
+  log_msg(sprintf("per-species maps: %d files written to fig/per_species/", n_per_species))
+}
+
 onland_note <- if (!is.null(cfg$qc) && isTRUE(cfg$qc$onland_flagged)) {
   "NOTE: marine realm — verify visually that no occurrence points fall on land (check_onland logic lives in edna-crosscheck; this map is the visual sanity check)."
 } else NULL
 if (!is.null(onland_note)) log_msg(onland_note)
 
-log_msg(sprintf("maps phase done (fig01=%s, fig02=%s)", fig01, fig02))
+log_msg(sprintf("maps phase done (fig01=%s, fig02=%s, per_species=%d)", fig01, fig02, n_per_species))

@@ -173,7 +173,7 @@ for (nm in species) {
           site_lon + horizon_km / 111 * 1.08, site_lat + horizon_km / 111 * 1.08)
   crop <- sf::st_bbox(c(xmin = ex[1], ymin = ex[2], xmax = ex[3], ymax = ex[4]), crs = 4326)
   coast <- get_coastline("auto", "medium")
-  if (!is.null(coast)) coast <- tryCatch(sf::st_crop(coast, crop), error = function(e) coast)
+  if (!is.null(coast)) coast <- safe_crop_coast(coast, crop)
 
   depth_note <- {
     if (!is.null(det$trait_depth_min_m[1]) && !is.na(det$trait_depth_min_m[1]) &&

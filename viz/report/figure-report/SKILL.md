@@ -1,7 +1,7 @@
 ---
 name: occviz-figure-report
 description: 'Multi-panel publication report + auto-generated figure captions manifest for occurrence-viz (report/ sub-skill, PLAN-marine-edna-meta-skill.md §5). Assembles patchwork multi-panel overview from per-figure ggplot snapshots, writes fig/figure-captions.md (markdown captions manifest with per-figure file lists and record counts) and figure-report.md (run summary incl. gracefully skipped figures). Consumes work/figure_status.jsonl ledger. Triggers: "occurrence viz report", "figure captions manifest", "multispecies panel figure".'
-version: 1.0.0
+version: 1.0.2
 updated: "2026-08-31"
 triggers:
   - "figure captions manifest"

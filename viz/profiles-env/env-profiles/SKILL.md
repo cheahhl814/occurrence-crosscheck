@@ -1,7 +1,7 @@
 ---
 name: occviz-env-profiles
 description: 'Realm-routed environmental profiles and envelopes for occurrence tables (occurrence-viz profiles-env/ sub-skill, PLAN-marine-edna-meta-skill.md §5). ONE plotting code path for all realms — the x-axis variable and figure family come from the run config: marine → depth profile (depth_m / env_bio_*); freshwater/terrestrial → elevation/bioclim profile (env_wc_*, elev). Environmental envelopes per species (points + mean±95% CI); optional trait-space plot rendered ONLY when crosscheck trait columns exist (PLAN §11.6 graceful absence). Triggers: "depth profile plot", "elevation profile eDNA", "env envelope plot", "trait space plot".'
-version: 1.0.0
+version: 1.0.2
 updated: "2026-08-31"
 triggers:
   - "depth profile eDNA"

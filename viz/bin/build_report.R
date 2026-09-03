@@ -27,22 +27,27 @@ opt <- parse_args(OptionParser(option_list = option_list))
 cfg <- read_run_config(opt$config)
 status_file <- file.path(opt$outdir, "work", "figure_status.jsonl")
 
+# `extras` holds each line's parsed `extra` field, keyed by its line index —
+# figure_status()'s extra (points/species/outputs/...) is the only source for
+# caption counts and file lists, so it must survive the statuses data.frame
+# round-trip (a plain data.frame can't hold a nested list value per row).
+extras <- list()
 statuses <- if (file.exists(status_file)) {
   lines <- readLines(status_file, warn = FALSE)
   lines <- lines[nzchar(trimws(lines))]
-  do.call(rbind, lapply(lines, function(l) {
-    rec <- tryCatch(fromJSON(l, simplifyVector = FALSE), error = function(e) NULL)
+  do.call(rbind, lapply(seq_along(lines), function(i) {
+    rec <- tryCatch(fromJSON(lines[i], simplifyVector = FALSE), error = function(e) NULL)
     if (is.null(rec)) return(NULL)
     g1 <- function(k) { v <- rec[[k]]; if (is.null(v) || length(v) == 0) "" else paste(as.character(v), collapse = ";") }
+    extras[[as.character(i)]] <<- rec$extra
     data.frame(figure = g1("figure"), status = g1("status"), reason = g1("reason"),
-               file = g1("file"), stringsAsFactors = FALSE)
+               file = g1("file"), idx = i, stringsAsFactors = FALSE)
   }))
 } else NULL
 
 if (is.null(statuses) || nrow(statuses) == 0) stop("work/figure_status.jsonl empty or unparseable — rerun maps + profiles phases.", call. = FALSE)
 
 # keep the LAST status per figure (reruns append several records)
-statuses$idx <- seq_len(nrow(statuses))
 statuses <- do.call(rbind, lapply(split(statuses, statuses$figure), function(g) g[which.max(g$idx), ]))
 
 rendered <- statuses[statuses$status == "rendered", , drop = FALSE]
@@ -108,15 +113,23 @@ fmt_num <- function(n) format(as.numeric(n), big.mark = ",")
 fig_num <- 1
 for (i in seq_len(nrow(rendered))) {
   r <- rendered[i, ]
-  ex <- r$extra
+  ex <- extras[[as.character(r$idx)]]
   exg <- function(k) { v <- ex[[k]]; ifelse(is.null(v), NA, v) }
-  cap <- switch(as.character(r$figure),
+  fig_key <- as.character(r$figure)
+  cap <- if (grepl("^per_species_", fig_key)) {
+    sprintf("**Figure %d.** Occurrence map for *%s* (%s records) — one-file-per-species output.",
+            fig_num, ifelse(is.na(exg("species")), fig_key, exg("species")),
+            ifelse(is.na(exg("points")), "?", fmt_num(exg("points"))))
+  } else switch(fig_key,
     "01_occurrence_map" = sprintf("**Figure %d.** Occurrence records for %s (%s points shown%s; %s distinct species). Basemap: rnaturalearth (medium, 1:50m) or maps::map() fallback, per the geocurate pattern.",
                                   fig_num, label,
                                   ifelse(is.na(exg("points")), "?", fmt_num(exg("points"))),
                                   ifelse(isTRUE(as.logical(exg("subsampled"))), sprintf(" — random subsample of %s records", exg("n_original")), ""),
                                   ifelse(is.na(exg("n_species")), "?", exg("n_species"))),
-    "02_species_maps"   = sprintf("**Figure %d.** Per-species occurrence maps for the top-record-count species (small multiples).", fig_num),
+    "02_species_maps"   = sprintf("**Figure %d.** Per-species occurrence maps for the top-record-count species (small multiples; %s species shown, %s points). One-file-per-species versions are under `fig/per_species/`.",
+                                  fig_num,
+                                  ifelse(is.na(exg("n_species")), "?", exg("n_species")),
+                                  ifelse(is.na(exg("points")), "?", fmt_num(exg("points")))),
     "03_env_profile"    = sprintf("**Figure %d.** Occurrence distribution along `%s` (x-axis: %s). Realm-routed profile: marine \u2192 depth, freshwater/terrestrial \u2192 elevation/bioclim — identical plotting code, variable chosen by run config.",
                                   fig_num, exg("x_column"),
                                   if (is.null(cfg$profiles)) "value" else if (is.null(cfg$profiles$x_label)) "value" else cfg$profiles$x_label),
@@ -130,11 +143,18 @@ for (i in seq_len(nrow(rendered))) {
     "07_species_contact_sheet" = sprintf("**Figure %d.** Citable species reference images: %s photos embedded, %s species flagged (no CC license / no image / ambiguous taxon) — attribution and license per species on each tile; source manifest `species_images.csv` (PLAN §11.8). FishBase photos are copyrighted and are never embedded.",
                                   fig_num, ifelse(is.na(exg("n_images")), "?", exg("n_images")),
                                   ifelse(is.na(exg("n_flagged")), "?", exg("n_flagged"))),
-    sprintf("**Figure %d.** %s", fig_num, as.character(r$figure))
+    "08_genus_candidates_sheet" = sprintf("**Figure %d.** Genus-narrow candidate species predicted for genus-only ASV groups: %s candidate photos, %s flagged. Quarantined candidate imagery — tiles are labelled with the genus and rank; these are hypotheses for the review queue, NOT species identifications, and never enter the verdict counts of figures 01-07.",
+                                  fig_num, ifelse(is.na(exg("n_candidates")), "?", exg("n_candidates")),
+                                  ifelse(is.na(exg("n_flagged")), "?", exg("n_flagged"))),
+    sprintf("**Figure %d.** %s", fig_num, fig_key)
   )
-  files <- unlist(r$file); files <- if (is.null(files)) unlist(exg("outputs")) else files
+  files <- unlist(r$file)
   files <- files[!is.na(files) & nzchar(files)]
-  n_shown <- if (!is.null(exg("n_used"))) fmt_num(exg("n_used")) else if (!is.null(exg("points"))) fmt_num(exg("points")) else "n/a"
+  if (length(files) == 0) {
+    files <- unlist(ex[["outputs"]])
+    files <- files[!is.na(files) & nzchar(files)]
+  }
+  n_shown <- if (!is.na(exg("n_used"))) fmt_num(exg("n_used")) else if (!is.na(exg("points"))) fmt_num(exg("points")) else "n/a"
   captions <- c(captions,
     sprintf("### fig/%s", sub("\\.(png|pdf|svg)$", "", basename(as.character(r$figure)))),
     sprintf("- %s", cap),
@@ -170,10 +190,7 @@ report <- c(report,
   "## Notes", "",
   "- Multi-panel figure assembled with patchwork from per-figure ggplot snapshots (work/plots/*.rds).",
   "- PNG at 300 dpi + vector PDF per pinned output contract; add `svg` to `output_formats` (requires svglite) at run preflight if wanted.",
-  sprintf("- captions manifest: `fig/figure-captions.md`", ""),
-    "08_genus_candidates_sheet" = sprintf("**Figure %d.** Genus-narrow candidate species predicted for genus-only ASV groups: %s candidate photos, %s flagged. Quarantined candidate imagery — tiles are labelled with the genus and rank; these are hypotheses for the review queue, NOT species identifications, and never enter the verdict counts of figures 01-07.",
-                                  fig_num, ifelse(is.na(exg("n_candidates")), "?", exg("n_candidates")),
-                                  ifelse(is.na(exg("n_flagged")), "?", exg("n_flagged"))),
+  "- captions manifest: `fig/figure-captions.md`",
   "")
 writeLines(report, file.path(opt$outdir, "figure-report.md"))
 

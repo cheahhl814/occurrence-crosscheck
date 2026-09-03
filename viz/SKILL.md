@@ -1,8 +1,8 @@
 ---
 name: occurrence-viz
 description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware publication-quality visualization of DwC-shaped occurrence tables — species occurrence maps (rnaturalearth + geocurate fallback pattern with fixed-seed point subsampling), realm-routed environmental profiles (marine → depth profiles; freshwater/terrestrial → elevation/bioclim profiles via the SAME plotting code with the x-axis variable from run config), per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Renderer PINNED to R (ggplot2 + sf + rnaturalearth; arrow for parquet). Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
-version: 1.0.1
-updated: "2026-09-01"
+version: 1.0.2
+updated: "2026-09-03"
 triggers:
   - "occurrence visualization"
   - "species occurrence map"
@@ -270,4 +270,30 @@ Added a "0.5 Ask-User Stop Points (runtime parameters)" section: SP-11 echoes cr
 concordance-ring pin (confirm-not-choose, since the report generator hard-fails exit 2 on a
 ring mismatch), SP-15 covers the `context_records` context-fetch budget, and SP-16 covers
 genus-narrow candidate cutoffs. Each carries an explicit auto-pick condition.
+
+## v1.0.2 — production-run findings: antimeridian crop bug, title bleed, per-species map files
+
+Three issues found running against real *Chiloscyllium* GBIF+OBIS data (Indo-West Pacific, wide
+longitude span) — see `HANDOFF-viz-issues-2026-09.md` for full repro:
+
+- **Coastline crop bug (HIGH):** `sf::st_crop()`/`st_intersection()` (sf 1.1.2) silently drop
+  most/all continental polygons when the crop bbox's longitude span exceeds 180° — they misread
+  the box as antimeridian-crossing and keep only the complementary sliver, with no error raised.
+  `lib_viz.R` gains `safe_crop_coast()`: selects intersecting features with `st_intersects()`
+  (predicate-only, unaffected by the bug) and skips the buggy clip entirely for spans > 180°,
+  returning the unclipped intersecting features instead of silently losing them. Used by
+  `plot_map.R` (fig 01/02/per-species) and `plot_per_species.R` (concordance-ring maps).
+- **Title/subtitle bleed (MEDIUM):** long `--input-label` values overflowed `plot.title`/
+  `plot.subtitle` off the right edge of fixed-width panels (worst in the fig 06 patchwork combo).
+  `lib_viz.R` gains `wrap_title()` (base `strwrap`, no new dependency); applied to all figure
+  titles/subtitles in `plot_map.R` and `plot_profiles.R`.
+- **Per-species map files (MEDIUM, requested):** `plot_map.R` now writes one map file per species
+  to `fig/per_species/{sanitized_scientificName}.{png,pdf}` in addition to the existing combined
+  fig 02 small-multiples panel (kept by default for backwards compatibility). Opt out via
+  `map.per_species_files: false` in the run config. Each file is registered in the figure-status
+  ledger and picked up by `fig/figure-captions.md` via a generic per-species caption.
+- Minor, same area: fig 02's caption now reports the real species/point counts (was a bare
+  "small multiples" sentence); `build_report.R` had a stray copy-pasted caption fragment bleeding
+  a rogue sentence into `figure-report.md` and was missing the `08_genus_candidates_sheet` case
+  from the actual captions switch — both fixed.
 

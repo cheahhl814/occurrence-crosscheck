@@ -1,7 +1,7 @@
 ---
 name: occviz-input-preflight
 description: 'Validate the input occurrence table and realm run config before any figure rendering (occurrence-viz Phase 2 of the marine-eDNA stack). Checks the PLAN §11.6 standalone contract: required DwC columns scientificName / decimalLatitude / decimalLongitude / eventDate; env+trait columns optional and gracefully absent. Emits a run preflight summary (records, species, date range, available profile x-variable, present env vars) and gates figure rendering on ≥1 renderable figure family. Triggers: "occurrence viz preflight", "validate dwc table for plotting", "occurrence viz run config".'
-version: 1.0.0
+version: 1.0.2
 updated: "2026-08-31"
 triggers:
   - "occurrence viz preflight"
