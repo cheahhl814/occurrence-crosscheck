@@ -20,6 +20,35 @@ ALLOWED_SOURCES = {"gbif", "obis", "worms", "fishbase", "bio-oracle", "worldclim
                    # (GBIF-spine tier: used for licensed portraits, not occurrence data)
                    "inaturalist"}
 
+# basisOfRecord allow-list for GBIF/OBIS occurrence queries — excludes museum
+# PreservedSpecimen/FossilSpecimen/LivingSpecimen records, whose coordinates
+# often reflect a collecting institution, an old type-locality, or a captive
+# source rather than an actual in-situ detection. HUMAN_OBSERVATION,
+# MACHINE_OBSERVATION and OBSERVATION are real in-situ sightings; MATERIAL_SAMPLE
+# is kept because that's the basisOfRecord this project's own eDNA data is
+# published under (see publish/ sub-skill).
+GBIF_BASIS_OF_RECORD = ["HUMAN_OBSERVATION", "MACHINE_OBSERVATION", "MATERIAL_SAMPLE", "OBSERVATION"]
+# GBIF DwC term equivalents, lowercased, for client-side filtering of OBIS records.
+OBIS_BASIS_OF_RECORD = {"humanobservation", "machineobservation", "materialsample", "occurrence"}
+
+
+def gbif_basis_of_record_qs() -> str:
+    """URL query-string fragment restricting a GBIF occurrence/search call to
+    GBIF_BASIS_OF_RECORD (GBIF ORs repeated basisOfRecord params; verified live)."""
+    return "".join(f"&basisOfRecord={v}" for v in GBIF_BASIS_OF_RECORD)
+
+
+def obis_basis_of_record_ok(basis_of_record: str | None) -> bool:
+    """True if an OBIS record's basisOfRecord passes OBIS_BASIS_OF_RECORD.
+    ponytail: OBIS's /v3/occurrence endpoint silently ignores any basisOfRecord
+    query param (all casings/formats tried, live-verified 2026-09-03) — ergo
+    this filter is applied client-side to individual records, not server-side.
+    It therefore only applies where full records are fetched (context_records.py);
+    OBIS's count-only endpoints (size=0/1, total field) can't be filtered this
+    way without turning an exact count into a capped sample, so those stay
+    unfiltered by basisOfRecord — see occurrence_lookup.py / range_lookup.py."""
+    return (basis_of_record or "").strip().lower() in OBIS_BASIS_OF_RECORD
+
 
 class NetLog:
     def __init__(self, run_dir: str | Path):

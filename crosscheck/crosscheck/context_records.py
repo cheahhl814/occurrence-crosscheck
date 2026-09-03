@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from netlog import NetLog  # noqa: E402
+from netlog import NetLog, gbif_basis_of_record_qs, obis_basis_of_record_ok  # noqa: E402
 
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
 OBIS_OCC = "https://api.obis.org/v3/occurrence"
@@ -35,7 +35,7 @@ OBIS_OCC = "https://api.obis.org/v3/occurrence"
 
 def records_gbif(net: NetLog, name: str, wkt: str, cap: int) -> list[dict]:
     url = (f"{GBIF_OCC}?scientificName={quote(name)}&geometry={quote(wkt)}"
-           f"&limit={min(cap, 300)}&hasCoordinate=true")
+           f"&limit={min(cap, 300)}&hasCoordinate=true{gbif_basis_of_record_qs()}")
     try:
         r = net.get("gbif", url)
         r.raise_for_status()
@@ -56,14 +56,15 @@ def records_obis(net: NetLog, name: str, wkt: str, cap: int) -> list[dict]:
         return [{"scientificName": x.get("scientificName", name),
                  "decimalLatitude": x["decimalLatitude"], "decimalLongitude": x["decimalLongitude"],
                  "year": (x.get("eventDate") or "")[:4], "source": "obis"}
-                for x in r.json().get("results", []) if x.get("decimalLatitude") is not None]
+                for x in r.json().get("results", [])
+                if x.get("decimalLatitude") is not None and obis_basis_of_record_ok(x.get("basisOfRecord"))]
     except Exception:
         return []
 
 
 def records_gbif_global(net: NetLog, name: str, cap: int) -> list[dict]:
     """Global (no geometry) GBIF sample for a taxon — the beyond-ring display pool."""
-    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit={min(cap, 300)}"
+    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit={min(cap, 300)}{gbif_basis_of_record_qs()}"
     try:
         r = net.get("gbif", url)
         r.raise_for_status()
@@ -93,7 +94,8 @@ def records_obis_global(net: NetLog, name: str, cap: int) -> list[dict]:
              "decimalLatitude": x["decimalLatitude"], "decimalLongitude": x["decimalLongitude"],
              "year": (x.get("eventDate") or x.get("year") or "")[:4] if isinstance(x.get("eventDate") or x.get("year") or "", str) else "",
              "source": "obis"}
-            for x in r.json().get("results", []) if x.get("decimalLatitude") is not None
+            for x in r.json().get("results", [])
+            if x.get("decimalLatitude") is not None and obis_basis_of_record_ok(x.get("basisOfRecord"))
         ]
     except Exception:
         return []

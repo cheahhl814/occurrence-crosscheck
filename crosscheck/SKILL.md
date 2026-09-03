@@ -1,8 +1,8 @@
 ---
 name: edna-crosscheck
 description: 'Cross-checks eDNA occurrence observations (from nf-edna/nf-edna-nanopore ASV tables) against GBIF/OBIS/WoRMS/FishBase taxonomic backbones and Bio-ORACLE/WorldClim-CHELSA environmental envelopes, realm-aware (marine/freshwater/terrestrial). Phase 1 of a 3-skill eDNA meta-stack (PLAN-marine-edna-meta-skill.md). Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv — flags, never silently drops records. Use when the user asks to "cross-check eDNA results", "validate ASV table against GBIF/OBIS", "QC eDNA occurrences", or "ground-truth eDNA detections".'
-version: 1.0.1
-updated: "2026-09-01"
+version: 1.0.2
+updated: "2026-09-03"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -164,4 +164,28 @@ Added a "0.5 Ask-User Stop Points (runtime parameters)" section documenting the 
 (SP-10, now backstopped by `preflight.py --require-confirm`), concordance ring R (SP-11), detection-
 site coordinate provenance (SP-12), and realm routing for mixed-taxa inputs (SP-13). Each carries an
 explicit auto-pick condition so unattended runs know exactly when they may proceed without asking.
+
+## v1.0.2 — basisOfRecord filter (exclude museum/fossil/captive records)
+
+Museum PreservedSpecimen / FossilSpecimen / LivingSpecimen (aquarium/zoo) records were being
+pulled into occurrence backdrops, ranges, and corroboration counts unfiltered — their coordinates
+often reflect a collecting institution, an old type-locality, or a captive source rather than an
+actual in-situ detection, which is exactly the kind of thing that should never silently count
+toward a CONCORDANT/DISCORDANT verdict.
+
+- `lib/netlog.py` gains `gbif_basis_of_record_qs()` and `obis_basis_of_record_ok()`: a shared
+  allow-list (HUMAN_OBSERVATION, MACHINE_OBSERVATION, MATERIAL_SAMPLE, OBSERVATION — MATERIAL_SAMPLE
+  kept because that's the basisOfRecord this project's own eDNA data is published under, see
+  `publish/`) used by all three GBIF/OBIS callers: `context_records.py`, `range_lookup.py`,
+  `occurrence_lookup.py`.
+- GBIF: applied server-side via repeated `basisOfRecord=` query params — verified live to actually
+  narrow GBIF's `count` (e.g. *Chiloscyllium punctatum*: 1467 unfiltered → 819 observation-basis-only).
+- OBIS: GBIF-style server-side filtering does NOT work — OBIS's `/v3/occurrence` endpoint silently
+  ignores any `basisOfRecord` query param in every casing/format tried (live-verified 2026-09-03: an
+  intentionally bogus value returned the identical total as no filter at all). Where full OBIS records
+  are fetched (`context_records.py`), the filter is applied client-side against each record's
+  `basisOfRecord` field instead. OBIS's count-only calls (`size=0`/`size=1`, total field, in
+  `occurrence_lookup.py`/`range_lookup.py`) can't be filtered this way without turning an exact count
+  into a capped sample, so those stay basisOfRecord-unfiltered — marked with a `ponytail:` comment
+  at each call site naming the ceiling (GBIF's world/region counts alongside them ARE filtered).
 

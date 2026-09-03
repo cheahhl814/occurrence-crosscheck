@@ -27,7 +27,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from netlog import NetLog  # noqa: E402
+from netlog import NetLog, gbif_basis_of_record_qs  # noqa: E402
 
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
 OBIS_OCC = "https://api.obis.org/v3/occurrence"
@@ -35,7 +35,7 @@ OBIS_OCC = "https://api.obis.org/v3/occurrence"
 
 def gbif_count(net: NetLog, name: str, bbox: list[float] | None) -> int | None:
     """Exact GBIF occurrence count. bbox=None -> worldwide count (no geometry filter)."""
-    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit=0"
+    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit=0{gbif_basis_of_record_qs()}"
     if bbox is not None:
         min_lon, min_lat, max_lon, max_lat = bbox
         wkt = (f"POLYGON(({min_lon} {min_lat},{max_lon} {min_lat},{max_lon} {max_lat},"
@@ -50,6 +50,8 @@ def gbif_count(net: NetLog, name: str, bbox: list[float] | None) -> int | None:
 
 
 def obis_count(net: NetLog, name: str, bbox: list[float] | None) -> int | None:
+    # ponytail: not basisOfRecord-filtered — see range_lookup.py's obis_count
+    # for why (OBIS ignores the param server-side; this is a total-only count).
     url = f"{OBIS_OCC}?scientificname={quote(name)}&size=1"
     if bbox is not None:
         min_lon, min_lat, max_lon, max_lat = bbox

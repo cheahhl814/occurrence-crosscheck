@@ -26,7 +26,7 @@ from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
-from netlog import NetLog  # noqa: E402
+from netlog import NetLog, gbif_basis_of_record_qs  # noqa: E402
 
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
 OBIS_OCC = "https://api.obis.org/v3/occurrence"
@@ -34,7 +34,7 @@ OBIS_OCC = "https://api.obis.org/v3/occurrence"
 
 def gbif_records(net: NetLog, name: str, limit: int) -> tuple[int | None, list[dict]]:
     """(global count, sampled georeferenced records) — no geometry filter."""
-    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit={limit}&hasCoordinate=true"
+    url = f"{GBIF_OCC}?scientificName={quote(name)}&limit={limit}&hasCoordinate=true{gbif_basis_of_record_qs()}"
     try:
         r = net.get("gbif", url)
         r.raise_for_status()
@@ -49,6 +49,11 @@ def gbif_records(net: NetLog, name: str, limit: int) -> tuple[int | None, list[d
 
 
 def obis_count(net: NetLog, name: str) -> int | None:
+    # ponytail: not basisOfRecord-filtered — OBIS's /v3/occurrence endpoint
+    # ignores that query param server-side (live-verified), and this is a
+    # size=0 total-only count with no records to filter client-side. GBIF's
+    # global count above IS basisOfRecord-filtered; upgrade path if this
+    # matters is fetching+filtering full OBIS records instead of the count.
     url = f"{OBIS_OCC}?scientificname={quote(name)}&size=0"
     try:
         r = net.get("obis", url)
