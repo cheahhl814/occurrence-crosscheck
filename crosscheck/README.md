@@ -16,11 +16,15 @@ pixi run setup-fishbase   # one-time R CRAN install of rfishbase (needs libuv, a
 ## Run
 
 ```bash
-pixi run crosscheck <input.csv> <realm> <marker> <out_dir>
+pixi run crosscheck <input.csv> <realm> <marker> <out_dir> --user-email <email>
 ```
 
 `input.csv` needs at minimum: `scientificName`, `decimalLatitude`, `decimalLongitude`, `eventDate`.
 `realm` is one of `marine` / `freshwater` / `terrestrial`.
+`--user-email` (SP-4, mandatory) is your contact email — sent in the GBIF/OBIS API
+`User-Agent` header per their contact-attribution policy, and embedded in any
+downstream DwC-A `meta.xml`. The skill preflight HARD-FAILs if missing or malformed;
+the agent must ask the user for this value (do not invent, do not default).
 
 ## Tests
 

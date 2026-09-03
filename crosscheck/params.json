@@ -3,6 +3,7 @@
   "realm": "marine",
   "marker": "12S",
   "bbox": [99.5, 1.5, 104.5, 6.5],
+  "user_email": "<your-contact-email>",
   "env_source": {
     "marine": "bio-oracle-v3",
     "freshwater": "worldclim-or-chelsa",

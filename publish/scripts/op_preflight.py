@@ -64,9 +64,21 @@ def main() -> int:
     if realm not in ALLOWED_REALM:
         print(f"[preflight] FATAL: manifest realm '{realm}' not in {sorted(ALLOWED_REALM)}")
         return 2
+    # SP-4: user_email must be present in the upstream run manifest. It is the
+    # GBIF/OBIS contact-attribution email and is embedded in DwC-A EML by
+    # gbif_publish/obis_publish. Refuse publish if absent (it can only be
+    # missing if the user re-ran publish on a pre-migration params.json;
+    # the new flow writes it in crosscheck preflight).
+    user_email = manifest.get("user_email")
+    if not user_email or "@" not in user_email:
+        print(f"[preflight] FATAL: params.json:user_email missing or malformed "
+              f"(got {user_email!r}). Re-run crosscheck preflight with --user-email "
+              f"<address> to write the run manifest.", file=sys.stderr)
+        return 2
     report["realm"] = realm
+    report["user_email"] = user_email
     report["gate_b"] = "marine_only_refusal_if_nonmarine" if realm != "marine" else "obis_allowed"
-    print(f"[preflight] manifest realm={realm!r} marker={manifest.get('marker')!r}")
+    print(f"[preflight] manifest realm={realm!r} marker={manifest.get('marker')!r} user_email={user_email}")
 
     # ---- enriched.parquet
     parquet_p = run_dir / "enriched.parquet"

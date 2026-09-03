@@ -15,8 +15,17 @@ The declared buffer is recorded in params.json (`buffer` block, PLAN §11.1)
 so every downstream consumer (occurrence-lookup, crosscheck) uses the SAME
 declared window and the report can state which window produced the verdicts.
 
+User email (SP-4, mandatory): the user's contact email is required so the
+HTTP client (`lib/netlog.py`) can build a `User-Agent: <tool>/<ver>
+(mailto:<email>)` per GBIF/OBIS API contact-attribution policy. The same
+value propagates downstream: every other sub-skill (viz, publish) reads
+`params.json:user_email` for DwC-A meta.xml attribution. preflight hard-fails
+if missing or malformed; the agent is expected to ASK the user (stop-point
+contract, see preflight/SKILL.md SP-4).
+
 Usage:
   python3 preflight.py <input.csv> <realm> <marker> <out_params.json> \
+      --user-email <email> \
       [--bbox MINLON MINLAT MAXLON MAXLAT | --buffer-km N] [--buffer-deg D]
 """
 from __future__ import annotations
@@ -25,10 +34,16 @@ import argparse
 import csv
 import json
 import math
+import re
 import sys
 
 REQUIRED_COLS = {"scientificName", "decimalLatitude", "decimalLongitude", "eventDate"}
 VALID_REALMS = {"marine", "freshwater", "terrestrial"}
+
+# Coarse email sanity check (RFC-5322-ish). The email is for API
+# contact-attribution, not for sending mail, so we don't need full RFC
+# compliance — just enough to catch typos.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 DEFAULT_ENV_LAYERS = {
     "bio_oracle": ["thetao", "so"],
@@ -51,6 +66,11 @@ def main() -> None:
     ap.add_argument("realm", choices=sorted(VALID_REALMS))
     ap.add_argument("marker")
     ap.add_argument("out_params")
+    ap.add_argument("--user-email", required=True,
+                     help="(SP-4, mandatory) contact email used in the User-Agent header "
+                          "for GBIF/OBIS API calls (mailto: form, per their attribution policy) "
+                          "and in DwC-A meta.xml contact for publish. The agent MUST ask the user "
+                          "for this value before invoking preflight; do not invent or guess.")
     ap.add_argument("--bbox", nargs=4, type=float, metavar=("MINLON", "MINLAT", "MAXLON", "MAXLAT"))
     ap.add_argument("--buffer-km", type=float, default=None)
     ap.add_argument("--buffer-deg", type=float, default=None)
@@ -59,6 +79,16 @@ def main() -> None:
                           "to auto mode on a degenerate input extent, forcing an explicit "
                           "--buffer-km/--buffer-deg/--bbox declaration.")
     args = ap.parse_args()
+
+    # SP-4: validate user_email format. Hard-fail preflight so the run can't
+    # start with a malformed/bogus contact, which would silently produce
+    # 403/429 responses from GBIF/OBIS later.
+    if not _EMAIL_RE.match(args.user_email):
+        print(f"preflight: FAIL --user-email {args.user_email!r} does not look like an email "
+              f"address (expected local@domain.tld with at least one dot in the domain). "
+              f"GBIF/OBIS API contact-attribution policy requires a valid contact. "
+              f"Re-ask the user or correct the input.", file=sys.stderr)
+        sys.exit(1)
 
     n_bbox_opt = sum(x is not None for x in (args.bbox, args.buffer_km, args.buffer_deg))
     if n_bbox_opt > 1:
@@ -121,6 +151,9 @@ def main() -> None:
         "bbox": bbox,
         "input_extent": extent,
         "buffer": buffer,
+        # SP-4: user_email is required. Every downstream consumer (NetLog,
+        # DwC-A meta.xml) reads this exact value; format validated above.
+        "user_email": args.user_email,
         "env_source": {"marine": "bio-oracle-v3", "freshwater": "worldclim-or-chelsa", "terrestrial": "worldclim-or-chelsa"},
         "env_layers": DEFAULT_ENV_LAYERS,
         "env_scenario": "present",
@@ -132,7 +165,7 @@ def main() -> None:
         json.dump(params, f, indent=2)
     print(f"preflight: GO realm={args.realm} rows={len(rows)} extent={extent} "
           f"buffer={buffer['mode']}({buffer.get('pad_deg', 0) if buffer['mode'] != 'user-bbox' else 'explicit'}) "
-          f"bbox={bbox} -> {args.out_params}")
+          f"bbox={bbox} user_email={args.user_email} -> {args.out_params}")
 
 
 if __name__ == "__main__":

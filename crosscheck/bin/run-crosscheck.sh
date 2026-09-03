@@ -2,11 +2,17 @@
 # edna-crosscheck orchestrator (bash-first, per pinned decision — no
 # Nextflow runner, this skill is I/O-bound).
 #
-# Usage: bin/run-crosscheck.sh <input.csv> <realm> <marker> <out_dir> [work_dir]
+# Usage: bin/run-crosscheck.sh <input.csv> <realm> <marker> <out_dir> \
+#                              --user-email <email> \
+#                              [work_dir] \
+#                              [ --bbox MINLON MINLAT MAXLON MAXLAT | --buffer-km N | --buffer-deg D ]
 #
 # Chain (hard order per PLAN §4/§7):
 #   preflight -> realm-router -> taxon-resolve -> fishbase-traits ->
 #   env-extract -> occurrence-lookup -> crosscheck
+#
+# SP-4 (user_email): mandatory. The agent MUST ask the user for this
+# before invoking the orchestrator. Do not invent, do not default.
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -14,14 +20,39 @@ INPUT_CSV="${1:?input.csv required}"
 REALM="${2:?realm required (marine|freshwater|terrestrial)}"
 MARKER="${3:?marker required}"
 OUT_DIR="${4:?out_dir required}"
-WORK_DIR="${OUT_DIR}/work"
 
 shift 4
+# Parse --user-email (SP-4, mandatory) out of the remaining args.
+USER_EMAIL=""
+BUFFER_ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --user-email)
+      USER_EMAIL="${2:?--user-email requires a value}"
+      shift 2
+      ;;
+    --user-email=*)
+      USER_EMAIL="${1#--user-email=}"
+      shift
+      ;;
+    *)
+      BUFFER_ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+if [ -z "$USER_EMAIL" ]; then
+  echo "run-crosscheck: FAIL --user-email is required (SP-4 — GBIF/OBIS API contact-attribution policy). Re-run with --user-email <address>." >&2
+  exit 1
+fi
 # Optional buffer-zone declaration (preflight phase, PLAN §4): pass through any of
 #   --bbox MINLON MINLAT MAXLON MAXLAT | --buffer-km N | --buffer-deg D
-# (first arg after out_dir may still be the legacy work_dir positional)
-if [ $# -gt 0 ] && [[ "$1" != --* ]]; then WORK_DIR="$1"; shift; fi
-BUFFER_ARGS=("$@")
+# (first arg after --user-email may still be the legacy work_dir positional)
+WORK_DIR="$OUT_DIR/work"
+if [ ${#BUFFER_ARGS[@]} -gt 0 ] && [[ "${BUFFER_ARGS[0]}" != --* ]]; then
+  WORK_DIR="${BUFFER_ARGS[0]}"
+  BUFFER_ARGS=("${BUFFER_ARGS[@]:1}")
+fi
 
 mkdir -p "$OUT_DIR" "$WORK_DIR"
 PARAMS_JSON="$OUT_DIR/params.json"
@@ -30,9 +61,15 @@ NAMES_FILE="$WORK_DIR/names.txt"
 
 echo "== preflight =="
 python3 "$SKILL_DIR/preflight/preflight.py" "$INPUT_CSV" "$REALM" "$MARKER" "$PARAMS_JSON" \
+    --user-email "$USER_EMAIL" \
     ${BUFFER_ARGS[@]+"${BUFFER_ARGS[@]}"}
 # ^ buffer zone is declared at preflight: --buffer-km N (pad extent by N km, lon-corrected
 #   at mean latitude) | --bbox MINLON MINLAT MAXLON MAXLAT (explicit) | default 0.25-deg pad.
+
+# Mirror params.json into work_dir so per-sub-skill scripts (which use work_dir
+# as their primary state root) can read user_email + buffer zone without
+# needing to know about the out_dir layout. Single source of truth: $PARAMS_JSON.
+cp "$PARAMS_JSON" "$WORK_DIR/params.json"
 
 echo "== realm-router =="
 python3 "$SKILL_DIR/realm-router/realm_router.py" "$PARAMS_JSON" "$ROUTING_JSON"

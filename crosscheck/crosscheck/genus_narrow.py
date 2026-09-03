@@ -28,6 +28,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 from urllib.parse import quote
@@ -35,6 +36,8 @@ from urllib.parse import quote
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))  # checklist_builder
 from netlog import NetLog  # noqa: E402
+
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 GBIF_MATCH = "https://api.gbif.org/v1/species/match"
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
@@ -106,9 +109,35 @@ def obis_species_in_genus(net: NetLog, genus: str, wkt: str, realm: str) -> list
 
 
 def main() -> None:
-    input_csv, realm, out_dir = sys.argv[1:4]
-    buffer_km = float(sys.argv[4]) if len(sys.argv) >= 5 else 0.0
-    max_sp = int(sys.argv[5]) if len(sys.argv) >= 6 else 40
+    argv = sys.argv[1:]
+    # SP-4: --user-email is mandatory (same contract as preflight/preflight.py
+    # + input_adapters.py). Required by NetLog for GBIF/OBIS API contact.
+    if "--user-email" in argv:
+        i = argv.index("--user-email")
+        try:
+            user_email = argv[i + 1]
+        except IndexError:
+            raise SystemExit("genus_narrow: FAIL --user-email requires a value")
+        argv = argv[:i] + argv[i + 2:]
+    elif any(a.startswith("--user-email=") for a in argv):
+        for a in argv:
+            if a.startswith("--user-email="):
+                user_email = a.split("=", 1)[1]
+                argv.remove(a)
+                break
+    else:
+        raise SystemExit(
+            "genus_narrow: FAIL --user-email is required (SP-4 — GBIF/OBIS API contact-attribution policy). "
+            "Re-run with --user-email <address>."
+        )
+    if not _EMAIL_RE.match(user_email):
+        raise SystemExit(
+            f"genus_narrow: FAIL --user-email {user_email!r} does not look like an email address. "
+            f"Re-ask the user for a valid local@domain.tld value."
+        )
+    input_csv, realm, out_dir = argv[0:3]
+    buffer_km = float(argv[3]) if len(argv) >= 4 else 0.0
+    max_sp = int(argv[4]) if len(argv) >= 5 else 40
 
     if realm not in {"marine", "freshwater", "terrestrial"}:
         raise SystemExit(f"genus_narrow: FAIL invalid realm {realm!r}")
@@ -148,7 +177,25 @@ def main() -> None:
                 f"genus_narrow: FAIL no coordinates for genus {g!r} and no --center; "
                 "genus narrowing is inherently regional and needs a detection site or --bbox")
 
-    net = NetLog(work)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+
+    params_p = work / "params.json"
+
+
+    if not params_p.exists():
+
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+
+        sys.exit(2)
+
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+
+    net = NetLog(work, user_email=user_email)
     out_rows = []
     for genus, pts in genera.items():
         seen_points = sorted(set(pts)) or [(None, None)]
@@ -193,6 +240,9 @@ def main() -> None:
         "skill_run": "edna-crosscheck", "input_mode": "genus-narrow", "realm": realm,
         "buffer_km": buffer_km, "genera": sorted(genera), "max_sp_per_genus": max_sp,
         "backbones": {"gbif": True, "worms": realm == "marine", "fishbase": True},
+        # Propagate user_email from the upstream preflight so any downstream
+        # consumer (subsequent genus-narrow runs, viz) reads the same value.
+        "user_email": user_email,
     }, indent=2))
     n_genera = len(genera)
     print(f"genus-narrow: {n_genera} genera -> {len(out_rows)} candidate rows -> {out/'genus_candidates.csv'}")

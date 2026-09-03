@@ -141,8 +141,17 @@ LICENSE_TEXT = ("http://creativecommons.org/licenses/by/4.0/legalcode "
 
 def build_eml(title, abstract, bbox, begin_date, end_date, creator_surname,
               creator_given="Data", package_id="occurrence-publish/1.0",
-              method_text=None, marker=None, taxonomic_coverage=None):
-    """Minimal-but-valid GBIF EML 2.1.1 profile document (hand-built XML)."""
+              method_text=None, marker=None, taxonomic_coverage=None,
+              contact_email=None):
+    """Minimal-but-valid GBIF EML 2.1.1 profile document (hand-built XML).
+
+    `contact_email` (SP-4, propagated from crosscheck preflight via
+    params.json:user_email) is required for GBIF/IPT publication —
+    IPTs reject datasets without a contactable individual. Recorded
+    once on the `contact` party (the dataset's primary contact) and
+    mirrored on `creator` + `metadataProvider` so any of the three
+    roles can be reached about the dataset.
+    """
     eml_ns = "eml://ecoinformatics.org/eml-2.1.1"
     eml = Element("eml:eml", {
         "xmlns:eml": eml_ns,
@@ -160,6 +169,9 @@ def build_eml(title, abstract, bbox, begin_date, end_date, creator_surname,
         ind = SubElement(p, "individualName")
         SubElement(ind, "givenName").text = creator_given
         SubElement(ind, "surName").text = creator_surname
+        if contact_email:
+            ea = SubElement(p, "electronicMailAddress")
+            ea.text = contact_email
         return p
 
     party("creator")

@@ -18,8 +18,11 @@ skills/occurrence-crosscheck/
 
 ```bash
 # Phase 1 — cross-check an ASV table (realm-aware)
+# SP-4: --user-email is mandatory. The agent must ask the user for their contact
+# email before invoking; it is sent in the User-Agent header to GBIF/OBIS per their
+# API contact-attribution policy, and embedded in DwC-A meta.xml for publish.
 cd crosscheck
-pixi run crosscheck test/fixtures/synthetic_asv.csv marine test/out
+pixi run crosscheck test/fixtures/synthetic_asv.csv marine test/out --user-email you@example.org
 #   → enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv
 
 # Phase 2 — figures from any DwC-shaped table (standalone)

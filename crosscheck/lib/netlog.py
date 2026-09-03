@@ -5,15 +5,29 @@ Every remote GET made by any sub-skill goes through here, tagged with a
 battle-test reads the resulting call_log.jsonl to assert which sources were
 (and were not) contacted for each realm — real evidence, not code review.
 
+User-Agent header carries the calling user's email in the standard
+`Name/Version (mailto:email)` form (RFC 7231 appendix + GBIF/OBIS API
+guidance) so remote services can contact the user about rate-limits,
+broken queries, or attribution. `user_email` is a required constructor
+arg: preflight MUST collect it from the user and write it to params.json
+so every NetLog consumer reads the same value. Hard-fails at construction
+if missing or malformed — no anonymous calls.
+
 ponytail: no retry/backoff framework, add urllib3 Retry if flaky sources
 show up in practice.
 """
 from __future__ import annotations
 import json
+import re
 import time
-import os
 from pathlib import Path
 import requests
+
+# basic RFC-5322-ish sanity: local@domain.tld, no whitespace, at least one
+# dot in the domain. This is a coarse check; the email is for API
+# contact/attribution, not for sending mail, so we don't need full RFC
+# compliance.
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 ALLOWED_SOURCES = {"gbif", "obis", "worms", "fishbase", "bio-oracle", "worldclim-chelsa",
                    # species-images fetcher (v2.3.0): iNaturalist is realm-agnostic
@@ -83,7 +97,16 @@ def obis_filtered_count(net: "NetLog", base_url: str) -> int | None:
 
 
 class NetLog:
-    def __init__(self, run_dir: str | Path):
+    def __init__(self, run_dir: str | Path, user_email: str, version: str = "1.0"):
+        if not user_email or not _EMAIL_RE.match(user_email):
+            raise ValueError(
+                f"NetLog: user_email is required and must look like an email address "
+                f"(got {user_email!r}). Preflight must collect it from the user and write "
+                f"it to params.json:user_email. This is GBIF/OBIS API contact-attribution "
+                f"policy (https://www.gbif.org/api), not optional."
+            )
+        self.user_email = user_email
+        self.user_agent = f"edna-crosscheck/{version} (mailto:{user_email})"
         self.run_dir = Path(run_dir)
         self.run_dir.mkdir(parents=True, exist_ok=True)
         self.log_path = self.run_dir / "call_log.jsonl"
@@ -93,8 +116,12 @@ class NetLog:
         t0 = time.time()
         resp = None
         err = None
+        # Always override User-Agent so callers can't accidentally strip our
+        # contact-attribution header.
+        kwargs.setdefault("headers", {})
+        kwargs["headers"]["User-Agent"] = self.user_agent
         try:
-            resp = requests.get(url, timeout=timeout, headers={"User-Agent": "edna-crosscheck/1.0"}, **kwargs)
+            resp = requests.get(url, timeout=timeout, **kwargs)
         except Exception as e:  # noqa: BLE001 - we want to log the failure and re-raise
             err = str(e)
             raise

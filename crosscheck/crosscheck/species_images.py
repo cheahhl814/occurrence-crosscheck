@@ -252,7 +252,19 @@ def main() -> None:
 
     names, ambiguous = read_species(list_path)
     (work_dir / "images").mkdir(parents=True, exist_ok=True)
-    net = NetLog(work_dir)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+    params_p = work_dir / "params.json"
+
+    if not params_p.exists():
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+        sys.exit(2)
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+    net = NetLog(work_dir, user_email=user_email)
 
     manifest = work_dir / "species_images.csv"
     prev: dict[str, dict] = {}
@@ -327,7 +339,19 @@ def candidates_run(candidates_csv: Path, work_dir: Path) -> None:
     local file still exists; shares the images/ cache with species_images runs.
     """
     (work_dir / "images").mkdir(parents=True, exist_ok=True)
-    net = NetLog(work_dir)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+    params_p = work_dir / "params.json"
+
+    if not params_p.exists():
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+        sys.exit(2)
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+    net = NetLog(work_dir, user_email=user_email)
     targets = load_candidates(candidates_csv)
     manifest = work_dir / "candidate_images.csv"
     prev: dict[str, dict] = {}

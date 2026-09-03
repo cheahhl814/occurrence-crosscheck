@@ -92,7 +92,25 @@ def main() -> None:
     # from the bbox is ambiguous with multiple points, so radius is the mean pad)
     radius = max(0.05, ((max_lon - min_lon) + (max_lat - min_lat)) / 4)
 
-    net = NetLog(work)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+
+    params_p = work / "params.json"
+
+
+    if not params_p.exists():
+
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+
+        sys.exit(2)
+
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+
+    net = NetLog(work, user_email=user_email)
     raw: dict[str, dict] = {}
     union: set[str] = set()
     for p in points:

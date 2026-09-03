@@ -22,6 +22,7 @@ Outputs: <work_dir>/habitat_iucn.csv (§11.11)
 from __future__ import annotations
 
 import csv
+import json
 import re
 import sys
 import time
@@ -177,7 +178,16 @@ def main() -> None:
         sys.exit(2)
     list_path, work_dir = Path(argv[0]), Path(argv[1])
     work_dir.mkdir(parents=True, exist_ok=True)
-    net = NetLog(work_dir)
+    # Preflight writes params.json (with user_email) into work_dir before
+    # this script runs; read it from there so the contact-attribution
+    # User-Agent is consistent across the whole run.
+    params_p = work_dir / "params.json"
+    if not params_p.exists():
+        print(f"habitat_iucn: FAIL {params_p} missing — run preflight first to "
+              f"collect user_email and write the run manifest.", file=sys.stderr)
+        sys.exit(2)
+    user_email = json.loads(params_p.read_text())["user_email"]
+    net = NetLog(work_dir, user_email=user_email)
     targets = [{"scientificName": n, "candidate_of": "", "candidate_rank": ""}
                for n in read_species(list_path)]
     if candidates_csv:

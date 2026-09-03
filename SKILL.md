@@ -52,6 +52,7 @@ nf-edna ASV table
 1. `publish/` refuses records whose `signoff_status` is `pending` (PLAN §11.4) — user sign-off is explicit.
 2. `publish/obis-publish` refuses non-`marine` realms.
 3. `publish/obis-publish` hard-rejects records without a WoRMS-valid `scientificNameID` LSID.
+4. **`crosscheck/preflight` requires `--user-email` (SP-4, mandatory).** The agent MUST ask the user for their contact email before invoking Phase 1; the value is sent in the GBIF/OBIS API `User-Agent` header (contact-attribution policy) and embedded in DwC-A `eml.xml` for Phase 3. preflight hard-fails if missing or malformed; do not invent, do not default.
 
 ## Environments (nested pixi workspaces — deliberate)
 

@@ -137,7 +137,25 @@ def main() -> None:
     with open(params_path) as f:
         params = json.load(f)
 
-    net = NetLog(work_dir)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+
+    params_p = work_dir / "params.json"
+
+
+    if not params_p.exists():
+
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+
+        sys.exit(2)
+
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+
+    net = NetLog(work_dir, user_email=user_email)
     bbox = params["bbox"]
     scenario = params.get("env_scenario", "present")
     prefix = routing["env_column_prefix"]

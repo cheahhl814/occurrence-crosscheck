@@ -19,14 +19,39 @@ SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 SPECIES="${1:?species list required (.txt or .csv)}";
 REALM="${2:?realm required (marine|freshwater|terrestrial)}"
 OUT_DIR="${3:?out_dir required}"
-LIMIT="${4:-120}"
+shift 3
+USER_EMAIL=""
+LIMIT="120"
+# Parse --user-email (SP-4) out of remaining args.
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --user-email)
+      USER_EMAIL="${2:?--user-email requires a value}"
+      shift 2
+      ;;
+    --user-email=*)
+      USER_EMAIL="${1#--user-email=}"
+      shift
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+if [ -z "$USER_EMAIL" ]; then
+  echo "run_species: FAIL --user-email is required (SP-4). Re-run with --user-email <address>." >&2
+  exit 1
+fi
+LIMIT="${ARGS[0]:-120}"
 WORK_DIR="$OUT_DIR/work"
 MARKER="list"   # placeholder: envelope mode is marker-independent
 
 mkdir -p "$OUT_DIR" "$WORK_DIR"
 
 echo "== input adapter (species mode) =="
-python3 "$SKILL_DIR/preflight/input_adapters.py" species "$SPECIES" "$REALM" "$MARKER" "$WORK_DIR"
+python3 "$SKILL_DIR/preflight/input_adapters.py" species "$SPECIES" "$REALM" "$MARKER" "$WORK_DIR" --user-email "$USER_EMAIL"
 PARAMS_JSON="$OUT_DIR/params.json"; cp "$WORK_DIR/params.json" "$PARAMS_JSON"
 
 echo "== realm-router =="

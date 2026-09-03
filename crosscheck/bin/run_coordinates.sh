@@ -7,28 +7,60 @@
 # known range?", asks "which species does the realm-routed sources say should
 # be here?" (the regional-checklist workflow, crosswalk+flags attached).
 #
-# Usage: bin/run_coordinates.sh <points.csv> <realm> <out_dir> [radius_deg] [max_taxa]
+# Usage: bin/run_coordinates.sh <points.csv> <realm> <out_dir>
+#                              --user-email <email>
+#                              [radius_deg] [max_taxa]
 #   points.csv : decimalLatitude,decimalLongitude (or lat/lon) rows, optional point_id
 # Outputs (out_dir):
 #   expected_species.csv   point x species: backbone IDs + match status + counts
 #   review_queue.csv       ambiguous/unresolved taxa (never silently resolved)
 #   env_snapshot.csv       realm-routed env values at each point
 #   params.json
+#
+# SP-4: --user-email is mandatory. The agent MUST ask the user before
+# invoking this orchestrator. Do not invent, do not default.
 set -euo pipefail
 
 SKILL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 POINTS="${1:?points.csv required (decimalLatitude,decimalLongitude)}"
 REALM="${2:?realm required (marine|freshwater|terrestrial)}"
 OUT_DIR="${3:?out_dir required}"
-RADIUS="${4:-0.5}"
-MAX_TAXA="${5:-200}"
+shift 3
+USER_EMAIL=""
+RADIUS="0.5"
+MAX_TAXA="200"
+# Parse --user-email (SP-4) out of remaining args.
+ARGS=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --user-email)
+      USER_EMAIL="${2:?--user-email requires a value}"
+      shift 2
+      ;;
+    --user-email=*)
+      USER_EMAIL="${1#--user-email=}"
+      shift
+      ;;
+    *)
+      ARGS+=("$1")
+      shift
+      ;;
+  esac
+done
+if [ -z "$USER_EMAIL" ]; then
+  echo "run_coordinates: FAIL --user-email is required (SP-4). Re-run with --user-email <address>." >&2
+  exit 1
+fi
+# Remaining args: [radius_deg] [max_taxa]
+RADIUS="${ARGS[0]:-0.5}"
+MAX_TAXA="${ARGS[1]:-200}"
 WORK_DIR="$OUT_DIR/work"
 MARKER="checklist"   # placeholder: mode B is marker-independent
 
 mkdir -p "$OUT_DIR" "$WORK_DIR"
 
 echo "== input adapter (coords mode) =="
-python3 "$SKILL_DIR/preflight/input_adapters.py" coords "$POINTS" "$REALM" "$MARKER" "$WORK_DIR" "$RADIUS"
+python3 "$SKILL_DIR/preflight/input_adapters.py" coords "$POINTS" "$REALM" "$MARKER" "$WORK_DIR" --user-email "$USER_EMAIL" "$RADIUS"
 PARAMS_JSON="$OUT_DIR/params.json"; cp "$WORK_DIR/params.json" "$PARAMS_JSON"
 
 echo "== realm-router =="

@@ -308,7 +308,10 @@ def main() -> int:
                  f"{len(occ_rows)} occurrences, per http://manual.obis.org/dna_data.html.",
         bbox=bbox, begin_date=begin, end_date=end,
         creator_surname=manifest.get("creator_surname", "AixBio"),
-        marker=gene, taxonomic_coverage=df["scientificName"].dropna().tolist())
+        marker=gene, taxonomic_coverage=df["scientificName"].dropna().tolist(),
+        # SP-4: user_email propagated from crosscheck preflight via params.json.
+        # Required by OBIS for any Event-Core package publication.
+        contact_email=manifest.get("user_email"))
     zip_path = run_dir / f"{ds_key}_obis_dwca.zip"
     d.build_dwca_zip(zip_path, {"location": "event.txt", "content": event_content},
                      ext_files, eml, meta)

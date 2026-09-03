@@ -85,6 +85,7 @@ enriched.parquet (§11.2) + flagged_occurrences.tsv (§11.4) + params.json run m
 | **a. Sign-off** | `flagged_occurrences.tsv` rows with `signoff_status == "pending"` are hard-blocked | `scripts/op_preflight.py` aborts publish with a per-row report until every row is `approved` or `excluded` (PLAN §11.4) |
 | **b. OBIS realm** | OBIS does not accept terrestrial/freshwater datasets | `scripts/obis_publish.py` refuses with a clear message when `realm != "marine"` |
 | **c. WoRMS LSID** | OBIS requires a WoRMS-valid `scientificNameID` | `scripts/obis_publish.py` hard-rejects any record whose `scientificNameID` is not `urn:lsid:marinespecies.org:taxname:N` |
+| **d. user_email (SP-4)** | `params.json:user_email` is required for DwC-A `eml.xml` contact blocks (GBIF IPT and OBIS both reject datasets without a contactable individual) | `scripts/op_preflight.py` aborts with a clear message if absent; the value originates from `crosscheck/preflight --user-email` |
 
 ## Sub-skill routing
 

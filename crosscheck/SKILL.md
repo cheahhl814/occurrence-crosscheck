@@ -106,9 +106,18 @@ parquet snapshots), Bio-ORACLE ERDDAP (`erddap.bio-oracle.org`, marine realm onl
 (`geodata.ucdavis.edu`, freshwater/terrestrial only). No API keys, no writes, no publishing — that's
 `occurrence-publish` (Phase 3, a sibling skill), out of scope here.
 
+**Contact-attribution User-Agent (SP-4):** every HTTP call carries a `User-Agent: edna-crosscheck/<ver> (mailto:<email>)`
+header built from the user's `--user-email` (collected at preflight, recorded in `params.json:user_email`,
+propagated to every NetLog consumer). GBIF's API contact-attribution policy
+(https://www.gbif.org/api) requires a real contact so they can reach the user about rate-limits,
+broken queries, or attribution. preflight HARD-FAILs if `--user-email` is missing or malformed;
+the agent MUST ask the user for this value before invoking the orchestrator (do not invent,
+do not default, do not read from git config). Same value is also embedded in DwC-A `eml.xml`
+by the `publish` sub-skill for GBIF/OBIS dataset attribution.
+
 ## Sub-skills
 
-1. [`preflight/`](preflight/SKILL.md) — input validation + run manifest.
+1. [`preflight/`](preflight/SKILL.md) — input validation + run manifest. Requires `--user-email` (SP-4).
 2. [`realm-router/`](realm-router/SKILL.md) — the load-bearing realm-branching sub-skill.
 3. [`taxon-resolve/`](taxon-resolve/SKILL.md) — WoRMS/GBIF/FishBase crosswalk cache; the #1 engineering
    risk per PLAN §7.

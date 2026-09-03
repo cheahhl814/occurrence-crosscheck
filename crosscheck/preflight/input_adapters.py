@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import csv
 import json
+import re
 import sys
 from pathlib import Path
 
@@ -30,6 +31,7 @@ DEFAULT_ENV_LAYERS = {
 }
 LAT_KEYS = ("decimalLatitude", "decimal latitude", "lat", "latitude")
 LON_KEYS = ("decimalLongitude", "decimal longitude", "lon", "long", "longitude")
+_EMAIL_RE = re.compile(r"^[^@\s]+@[^@\s]+\.[^@\s]+$")
 
 
 def _read_table(path: Path) -> list[dict]:
@@ -77,13 +79,14 @@ def read_points(path: Path) -> list[dict]:
     return points
 
 
-def write_params(work: Path, realm: str, marker: str, bbox: list[float] | None) -> None:
+def write_params(work: Path, realm: str, marker: str, bbox: list[float] | None, user_email: str) -> None:
     params = {
         "skill_run": "edna-crosscheck",
         "input_mode": "species" if bbox is None else "coords",
         "realm": realm,
         "marker": marker,
         "bbox": bbox,
+        "user_email": user_email,
         "env_source": {"marine": "bio-oracle-v3", "freshwater": "worldclim-or-chelsa", "terrestrial": "worldclim-or-chelsa"},
         "env_layers": DEFAULT_ENV_LAYERS,
         "env_scenario": "present",
@@ -93,7 +96,36 @@ def write_params(work: Path, realm: str, marker: str, bbox: list[float] | None) 
 
 
 def main() -> None:
-    mode, inp, realm, marker, work_dir = sys.argv[1:6]
+    # argv shape:
+    #   input_adapters.py <mode> <input> <realm> <marker> <work_dir>
+    #     --user-email <email> [radius_deg]
+    # SP-4: --user-email is mandatory (same contract as preflight/preflight.py).
+    argv = sys.argv[1:]
+    if "--user-email" in argv:
+        i = argv.index("--user-email")
+        try:
+            user_email = argv[i + 1]
+        except IndexError:
+            raise SystemExit("input_adapters: FAIL --user-email requires a value")
+        argv = argv[:i] + argv[i + 2:]
+    elif any(a.startswith("--user-email=") for a in argv):
+        for a in argv:
+            if a.startswith("--user-email="):
+                user_email = a.split("=", 1)[1]
+                argv.remove(a)
+                break
+    else:
+        raise SystemExit(
+            "input_adapters: FAIL --user-email is required (SP-4 — GBIF/OBIS API contact-attribution policy). "
+            "Re-run with --user-email <address>."
+        )
+    if not _EMAIL_RE.match(user_email):
+        raise SystemExit(
+            f"input_adapters: FAIL --user-email {user_email!r} does not look like an email address. "
+            f"Re-ask the user for a valid local@domain.tld value."
+        )
+
+    mode, inp, realm, marker, work_dir = argv[:5]
     if realm not in REQUIRED_REALMS:
         raise SystemExit(f"input_adapters: FAIL invalid realm {realm!r}")
     work = Path(work_dir)
@@ -103,7 +135,7 @@ def main() -> None:
     if mode == "species":
         names = read_names(path)
         (work / "names.txt").write_text("\n".join(names) + "\n")
-        write_params(work, realm, marker, bbox=None)  # inverted query: envelope IS the output
+        write_params(work, realm, marker, bbox=None, user_email=user_email)  # inverted query: envelope IS the output
         print(f"input-adapters: species mode — {len(names)} unique names -> {work}/names.txt, bbox=None (inverted query)")
 
     elif mode == "coords":
@@ -117,7 +149,7 @@ def main() -> None:
         (work / "points.csv").write_text(  # id-bearing: consumed by checklist_builder joins
             "point_id,decimalLatitude,decimalLongitude\n" +
             "".join(f"{p['point_id']},{p['decimalLatitude']},{p['decimalLongitude']}\n" for p in points))
-        write_params(work, realm, marker, bbox)
+        write_params(work, realm, marker, bbox, user_email=user_email)
         (work / "points_geo.csv").write_text(  # DwC-named: consumed by env-extract (scientificName = point_id placeholder,
             # mode B points have no species of their own; env values are per-POINT)
             "scientificName,decimalLatitude,decimalLongitude\n" +

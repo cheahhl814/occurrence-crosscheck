@@ -161,7 +161,25 @@ def main() -> None:
         routing = json.load(f)
     names = [n.strip() for n in Path(names_file).read_text().splitlines() if n.strip()]
 
-    net = NetLog(work_dir)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+
+    params_p = work_dir / "params.json"
+
+
+    if not params_p.exists():
+
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+
+        sys.exit(2)
+
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+
+    net = NetLog(work_dir, user_email=user_email)
     db_path = work_dir / "crosswalk_cache.sqlite"
     con = sqlite3.connect(db_path)
     con.execute(SCHEMA)

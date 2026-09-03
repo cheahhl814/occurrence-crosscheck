@@ -78,7 +78,19 @@ def main() -> None:
               for d in fb if isinstance(d, dict)}
 
     crosswalk_resolve_note = work / "review_queue.csv"  # taxon-resolve wrote it; carry through downstream
-    net = NetLog(work)
+    # Read user_email from work_dir/params.json (preflight writes it there).
+
+    params_p = work / "params.json"
+
+    if not params_p.exists():
+
+        print("FAIL: " + str(params_p) + " missing — run preflight first.", file=sys.stderr)
+
+        sys.exit(2)
+
+    user_email = json.loads(params_p.read_text())["user_email"]
+
+    net = NetLog(work, user_email=user_email)
     rows = []
     for name in names:
         fb_e = fb.get(name, {})
