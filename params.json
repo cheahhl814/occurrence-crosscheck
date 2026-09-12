@@ -1,0 +1,48 @@
+{
+  "skill_name": "occurrence-crosscheck",
+  "skill_version": "2.0.0",
+  "skill_updated": "2026-08-31",
+  "skill_short_description": "Meta-skill for the eDNA occurrence pipeline: (1) cross-check eDNA ASV observations against GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim environmental envelopes (realm-aware: marine/freshwater/terrestrial); (2) publication-ready occurrence figures (maps, profiles, envelopes, trait space); (3) publish validated observations as DwC-A to GBIF/IPT and OBIS (Event Core + DNA-derived data). Router \u2014 routes to the three phase sub-skills: crosscheck/, viz/, publish/. Use when asked to 'cross-check eDNA results', 'plot species occurrence', or 'publish eDNA to GBIF/OBIS'.",
+  "skill_description": "Meta-skill for the eDNA occurrence pipeline: (1) cross-check eDNA ASV observations against GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim environmental envelopes (realm-aware: marine/freshwater/terrestrial); (2) publication-ready occurrence figures (maps, profiles, envelopes, trait space); (3) publish validated observations as DwC-A to GBIF/IPT and OBIS (Event Core + DNA-derived data). Router \u2014 routes to the three phase sub-skills: crosscheck/, viz/, publish/. Use when asked to 'cross-check eDNA results', 'plot species occurrence', or 'publish eDNA to GBIF/OBIS'.",
+  "skill_triggers": [
+    "cross-check eDNA results",
+    "validate ASV table against GBIF",
+    "QC eDNA occurrences",
+    "ground-truth eDNA detections",
+    "plot species occurrence",
+    "publication maps for occurrence data",
+    "publish eDNA to GBIF",
+    "publish to OBIS",
+    "occurrence-crosscheck"
+  ],
+  "github_repo": "github.com/cheahhl814/occurrence-crosscheck",
+  "sub_skills": [
+    {
+      "name": "crosscheck",
+      "purpose": "Phase 1 of the eDNA meta-skill stack (merged into `../../occurrence-crosscheck`) described in `../../../PLAN-marine-edna",
+      "artifact": "crosscheck-artifact.md"
+    },
+    {
+      "name": "publish",
+      "purpose": "**v1.0.0.** Publish leg of the eDNA meta-skill stack (`PLAN-marine-edna-meta-skill.md` Phase 3).",
+      "artifact": "publish-artifact.md"
+    },
+    {
+      "name": "viz",
+      "purpose": "**v1.0.0.** Realm-aware, standalone publication-quality occurrence visualization. This file is a **router** \u2014 the sub-sk",
+      "artifact": "viz-artifact.md"
+    }
+  ],
+  "skill_title": "occurrence-crosscheck",
+  "github_org": "cheahhl814",
+  "pixi_channels": [
+    "conda-forge",
+    "bioconda"
+  ],
+  "license": "MIT",
+  "target_tiers": [
+    "large"
+  ],
+  "with_nextflow_runner": false,
+  "tool_inventory": []
+}
