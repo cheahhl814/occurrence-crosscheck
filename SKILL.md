@@ -1,8 +1,8 @@
 ---
 name: occurrence-crosscheck
 description: "Meta-skill for the eDNA occurrence pipeline: (1) cross-check eDNA ASV observations against GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim environmental envelopes (realm-aware: marine/freshwater/terrestrial); (2) publication-ready occurrence figures (maps, profiles, envelopes, trait space); (3) publish validated observations as DwC-A to GBIF/IPT and OBIS (Event Core + DNA-derived data). Router — routes to the three phase sub-skills: crosscheck/, viz/, publish/. Use when asked to 'cross-check eDNA results', 'plot species occurrence', or 'publish eDNA to GBIF/OBIS'."
-version: 2.0.0
-updated: "2026-08-31"
+version: 2.1.0
+updated: "2026-10-05"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -93,3 +93,14 @@ Full histories: `../../../archieved/*.bundle` (verified complete; `git clone <bu
 - `report-html` (viz v1.7.0): one-command self-contained HTML dashboard (KPIs, filters, plotly occurrence map, per-species cards, quarantined candidates section) compiled from the run's manifests — `pixi run report-html ... --out <dir>` (§11.12).
 - Merged-ring semantics (v2.5.1/v1.8.0): one --near-km ring = map ring = concordance threshold; beyond-ring occurrences visible on maps (pale points + global sample), NO_RECORD = globally absent (§11.13).
 
+## Dependencies → biodb-fetch (shared data lake)
+
+Consumes [biodb-fetch](https://github.com/cheahhl814/biodb-fetch) v1.0.0 (deployed at `~/.agents/skills/biodb-fetch/`) for the marine-backbone and occurrence lookups the crosscheck phase performs:
+
+- `scripts/occurrence_marine.py` — OBIS occurrence/checklist/dataset pulls (public tier; WKT polygon, year-window, depth, datasetid filters). biodb-fetch owns OBIS rate spacing and manifest recording.
+- `scripts/taxonomy.py worms` — WoRMS AphiaID resolution (+ synonyms/vernaculars) for OBIS joins.
+- `scripts/taxonomy.py colxr` — Catalogue of Life XR lookups (GBIF's default taxonomy since its Backbone froze in 2023).
+- **Freshness rule (critical for crosschecking)**: OBIS occurrence data grows over time — biodb-fetch cache rows carry `retrieval_date`. For a current-state comparison pass `--refresh`; never mix cached and freshly-pulled rows for the same species/region window in one crosscheck.
+- **Contract v2**: locate files via the emitted `manifest.tsv` (`cache=hit` rows point into the shared store) — never parse biodb-fetch internals.
+- FishBase / Bio-ORACLE / WorldClim lookups stay inside this skill (out of biodb-fetch's scope).
+- **Degradation**: biodb-fetch unavailable → use this skill's direct API calls and note the deviation in the crosscheck report.

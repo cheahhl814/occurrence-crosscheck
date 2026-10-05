@@ -1,8 +1,8 @@
 ---
 name: edna-crosscheck
 description: 'Cross-checks eDNA occurrence observations (from nf-edna/nf-edna-nanopore ASV tables) against GBIF/OBIS/WoRMS/FishBase taxonomic backbones and Bio-ORACLE/WorldClim-CHELSA environmental envelopes, realm-aware (marine/freshwater/terrestrial). Phase 1 of a 3-skill eDNA meta-stack (PLAN-marine-edna-meta-skill.md). Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv — flags, never silently drops records. Use when the user asks to "cross-check eDNA results", "validate ASV table against GBIF/OBIS", "QC eDNA occurrences", or "ground-truth eDNA detections".'
-version: 1.0.3
-updated: "2026-09-03"
+version: 1.1.0
+updated: "2026-10-05"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -218,3 +218,14 @@ client-side, since OBIS ignores the query param server-side).
 - Both `occurrence_lookup.py`'s and `range_lookup.py`'s `obis_count()` are now one-line wrappers
   around `obis_filtered_count()`.
 
+## Dependencies → biodb-fetch (shared data lake)
+
+Consumes [biodb-fetch](https://github.com/cheahhl814/biodb-fetch) v1.0.0 (deployed at `~/.agents/skills/biodb-fetch/`) for the marine-backbone and occurrence lookups the crosscheck phase performs:
+
+- `scripts/occurrence_marine.py` — OBIS occurrence/checklist/dataset pulls (public tier; WKT polygon, year-window, depth, datasetid filters). biodb-fetch owns OBIS rate spacing and manifest recording.
+- `scripts/taxonomy.py worms` — WoRMS AphiaID resolution (+ synonyms/vernaculars) for OBIS joins.
+- `scripts/taxonomy.py colxr` — Catalogue of Life XR lookups (GBIF's default taxonomy since its Backbone froze in 2023).
+- **Freshness rule (critical for crosschecking)**: OBIS occurrence data grows over time — biodb-fetch cache rows carry `retrieval_date`. For a current-state comparison pass `--refresh`; never mix cached and freshly-pulled rows for the same species/region window in one crosscheck.
+- **Contract v2**: locate files via the emitted `manifest.tsv` (`cache=hit` rows point into the shared store) — never parse biodb-fetch internals.
+- FishBase / Bio-ORACLE / WorldClim lookups stay inside this skill (out of biodb-fetch's scope).
+- **Degradation**: biodb-fetch unavailable → use this skill's direct API calls and note the deviation in the crosscheck report.
