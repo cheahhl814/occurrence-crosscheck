@@ -1,9 +1,13 @@
 [workspace]
 name = "occurrence-viz"
-version = "1.0.0"
+# Tracks viz/SKILL.md frontmatter `version: 1.0.3` — keep the two in sync.
+version = "1.0.3"
 description = "Realm-aware publication-quality occurrence visualization (maps, depth/elevation profiles, env envelopes, trait space) for DwC-shaped tables. R renderer: ggplot2 + sf + rnaturalearth; arrow for parquet. PLAN-marine-edna-meta-skill.md Phase 2."
 channels = ["conda-forge"]
 platforms = ["linux-64"]
+# `exclude-newer` bounds the re-solve to a known-good window so the env does not
+# drift between machines. Bump it deliberately when you bump dependencies.
+exclude-newer = "2026-10-22"
 
 [dependencies]
 # Every tool here was confirmed via `pixi search -c conda-forge` during preflight (params.json: status "found").

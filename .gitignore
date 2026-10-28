@@ -2,6 +2,12 @@
 crosscheck/.pixi/
 viz/.pixi/
 publish/.pixi/
+# the router's own env (top-level pixi.toml) + its lockfile.
+# Root-anchored: crosscheck/ and viz/ deliberately TRACK their pixi.lock
+# (their envs are pinned and reproduced from the lock), so only the router's
+# own lock is ignored.
+.pixi/
+/pixi.lock
 */__pycache__/
 __pycache__/
 *.pyc

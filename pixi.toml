@@ -1,0 +1,51 @@
+[workspace]
+name = "occurrence-crosscheck"
+# SKILL.md frontmatter carries `version: 2.1.0` — keep the two in sync when bumping.
+version = "2.1.0"
+description = "Meta-skill router for the eDNA occurrence pipeline: cross-check ASV observations against GBIF/OBIS/WoRMS/FishBase + environmental envelopes, render publication figures, and publish validated observations as DwC-A to GBIF/IPT and OBIS."
+channels = ["conda-forge"]
+platforms = ["linux-64", "osx-64", "osx-arm64"]
+# `pixi.lock` is gitignored (see .gitignore), so a fresh clone re-solves instead of
+# replaying pinned artifacts. `exclude-newer` bounds that re-solve to a known-good
+# window so the env does not drift between machines. Bump it deliberately whenever
+# you bump the dependencies below.
+exclude-newer = "2026-10-22"
+
+[dependencies]
+# ROUTER-ONLY environment.
+#
+# The three phase sub-skills keep their OWN pinned workspaces (crosscheck/,
+# viz/, publish/) because their toolchains diverge — viz is R-only, while
+# crosscheck/ and publish/ are Python-first. See SKILL.md "Environments
+# (nested pixi workspaces — deliberate)": the envs are deliberately NOT merged.
+#
+# This manifest therefore carries no bioinformatics toolchain. It exists to
+# (a) give the router a `pixi run` dispatch surface into the nested workspaces
+#     and (b) provide an interpreter for the router's own stdlib-only
+#     structural smoke tests. The sub-skill manifests own the real tools.
+python = ">=3.10,<4"
+
+[tasks]
+# Phase 1 — cross-check eDNA occurrences against the taxonomic + environmental
+# backbones (GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim).
+# Usage: pixi run crosscheck <asv_table> <realm> <outdir>
+crosscheck = { cmd = "pixi run crosscheck", cwd = "crosscheck" }
+# Phase 2 — publication figures (maps, profiles, envelopes, trait space) from
+# any DwC-shaped table.
+# Usage: pixi run viz --input F.parquet --config config/run-config.marine.json --outdir viz_out
+viz = { cmd = "pixi run viz", cwd = "viz" }
+# Phase 3 — gated DwC-A publishing to GBIF/IPT and OBIS. The entry point is the
+# preflight gate, which HARD-stops on any record whose signoff_status is
+# still `pending` (PLAN §11.4).
+# Usage: pixi run publish
+publish = { cmd = "pixi run publish-preflight", cwd = "publish" }
+# Phase 3 dry run — synthetic fixture end-to-end, no network writes.
+publish-dry-run = { cmd = "pixi run battle-test", cwd = "publish" }
+# Router-level structural smoke tests (18 checks: router wiring, sub-skill
+# frontmatter coherence, contract presence, env isolation).
+test-smoke = "python3 test_smoke.py"
+# Self-check: compares this skill's git SHA to upstream
+# (github.com/cheahhl814/occurrence-crosscheck).
+# See bin/skill-update-check.py for the verdict legend
+# (UP-TO-DATE / LOCAL-AHEAD / BEHIND-BY-N / OFFLINE / NO-ORIGIN).
+update-check = "python3 bin/skill-update-check.py"

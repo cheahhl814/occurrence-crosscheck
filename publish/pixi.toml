@@ -1,9 +1,13 @@
 [workspace]
 name = "occurrence-publish"
-version = "1.0.0"
+# Tracks publish/SKILL.md frontmatter `version: 1.0.1` — keep the two in sync.
+version = "1.0.1"
 description = "Phase 3 of the eDNA meta-skill stack: gated DwC-A publishing to GBIF and OBIS"
 channels = ["conda-forge"]
 platforms = ["linux-64", "osx-64", "osx-arm64"]
+# `exclude-newer` bounds the re-solve to a known-good window so the env does not
+# drift between machines. Bump it deliberately when you bump dependencies.
+exclude-newer = "2026-10-22"
 
 [dependencies]
 # Confirmed during preflight: pixi 0.70.1 on PATH; python>=3.11 via pixi (pinned decision).

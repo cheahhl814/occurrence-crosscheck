@@ -1,9 +1,17 @@
 [workspace]
 authors = ["AIx-BIO <noreply@aix-bio.example>"]
-channels = ["conda-forge", "bioconda", "anaconda"]
+channels = ["conda-forge", "bioconda"]
 name = "edna-crosscheck"
 platforms = ["linux-64"]
-version = "0.1.0"
+# Tracks crosscheck/SKILL.md frontmatter `version: 1.1.0` — keep the two in sync.
+version = "1.1.0"
+description = "Phase 1 of the eDNA occurrence meta-stack: cross-checks ASV observations against GBIF/OBIS/WoRMS/FishBase and Bio-ORACLE/WorldClim environmental envelopes, realm-aware. Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv."
+# The `anaconda` channel was dropped: it is a licensed default channel whose use
+# carries ToS conditions, and every dependency here resolves from conda-forge +
+# bioconda without it.
+# `exclude-newer` bounds the re-solve to a known-good window so the env does not
+# drift between machines. Bump it deliberately when you bump dependencies.
+exclude-newer = "2026-10-22"
 
 [tasks]
 setup-fishbase = "Rscript -e 'if (!requireNamespace(\"rfishbase\", quietly=TRUE)) install.packages(\"rfishbase\", repos=\"https://cloud.r-project.org\")'"
