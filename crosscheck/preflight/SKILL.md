@@ -11,7 +11,7 @@ triggers:
 # preflight/edna-crosscheck-preflight
 
 ## Inputs
-- Raw ASV/occurrence CSV from `nf-edna` / `nf-edna-nanopore`, or any DwC-shaped table with
+- Raw ASV/occurrence CSV from `nf-edna` / `ednanopore`, or any DwC-shaped table with
   `scientificName`, `decimalLatitude`, `decimalLongitude`, `eventDate`.
 - User-declared `realm` (`marine`|`freshwater`|`terrestrial`), `marker` (e.g. `12S`).
 

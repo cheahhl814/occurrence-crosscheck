@@ -1,7 +1,7 @@
 ---
 name: occurrence-viz
 description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware publication-quality visualization of DwC-shaped occurrence tables — species occurrence maps (rnaturalearth + geocurate fallback pattern with fixed-seed point subsampling), realm-routed environmental profiles (marine → depth profiles; freshwater/terrestrial → elevation/bioclim profiles via the SAME plotting code with the x-axis variable from run config), per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Renderer PINNED to R (ggplot2 + sf + rnaturalearth; arrow for parquet). Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
-version: 1.0.2
+version: 1.0.3
 updated: "2026-09-03"
 triggers:
   - "occurrence visualization"
@@ -270,6 +270,20 @@ Added a "0.5 Ask-User Stop Points (runtime parameters)" section: SP-11 echoes cr
 concordance-ring pin (confirm-not-choose, since the report generator hard-fails exit 2 on a
 ring mismatch), SP-15 covers the `context_records` context-fetch budget, and SP-16 covers
 genus-narrow candidate cutoffs. Each carries an explicit auto-pick condition.
+
+## v1.0.3 — occurrence-map legend (colour → species mapping was unreadable)
+
+Production finding (Chiloscyllium GBIF+OBIS run, Indo-West Pacific): `fig/01_occurrence_map.png`
+colours points by species but the overview plot suppressed its legend
+(`theme(legend.position = "none")`), leaving no indication of which colour is which species.
+The per-species small multiples (fig 02) and `per_species/` files carry panel titles and need no
+legend — the fix targets the all-species overview only.
+
+- `bin/plot_map.R` (fig 01): legend now rendered on the right, with bold "Species" title and
+  italic species keys (matches the italic-label convention of fig 02 strips and the iTOL route).
+- Fig 02 small multiples, `per_species/` files, and the fig 06 patchwork are unchanged — each is
+  self-labelled by design.
+- Captions manifest unchanged (`figure-captions.md` picks up counts as before).
 
 ## v1.0.2 — production-run findings: antimeridian crop bug, title bleed, per-species map files
 

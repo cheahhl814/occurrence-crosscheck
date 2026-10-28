@@ -112,7 +112,12 @@ p_overview <- ggplot() +
                    if (!is.null(dfp_overlay) && nrow(dfp_overlay) > 0) sprintf(" · overlay: %s context records (GBIF/OBIS)", format(nrow(dfp_overlay), big.mark = ",")) else "",
                    cfg$realm)),
        x = "Longitude", y = "Latitude", colour = "Species") +
-  theme_viz + theme(legend.position = "none")
+  theme_viz +
+  # v1.0.3: legend SHOWN on the all-species overview (was suppressed; without it the
+  # colour -> species mapping is unreadable). Italic species keys, right side.
+  theme(legend.position = "right",
+        legend.title = element_text(face = "bold", size = 9),
+        legend.text = element_text(face = "italic", size = 8))
 
 fig01 <- tryCatch({
   out_files <- save_fig(p_overview, file.path(opt$outdir, "fig", "01_occurrence_map"), formats = formats,
