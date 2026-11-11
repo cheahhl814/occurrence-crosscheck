@@ -5,8 +5,11 @@ under the detection points on occurrence maps.
 
 Distinct from occurrence_lookup.py (counts only, limit=0): this fetches actual
 records — capped per species (--per-species, default 150), within a --buffer-km
-ring, PLUS (v2.5.1, --outside-cap N) a bounded global sample BEYOND the window so maps
-can show where species occur outside the ring (merged-ring semantics, PLAN §11.13):
+ring, PLUS (v2.5.1, --outside-cap N) a bounded global sample BEYOND the ring so maps
+can show where species occur outside it. v2.5.2: for a single-site (degenerate)
+input extent the window is a GEODESIC CIRCLE (server-side polygon filter + client
+haversine double-check), matching occurrence_lookup v2.5.2; multi-site extents keep
+the box window with a cos(lat)-corrected longitude pad:
 region (default 500 km) around the input extent. "Database sampling gap at a
 tiny buffer" is exactly the failure 2024K1 exposed, so the context window is
 wider than the crosscheck window BY DEFAULT.
@@ -22,12 +25,20 @@ from __future__ import annotations
 
 import csv
 import json
+import math
 import sys
 from pathlib import Path
 from urllib.parse import quote
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "lib"))
 from netlog import NetLog, gbif_basis_of_record_qs, obis_basis_of_record_ok  # noqa: E402
+from geo import circle_wkt, corrected_box, haversine_km  # noqa: E402
+
+def _box_wkt(bbox: list[float]) -> str:
+    min_lon, min_lat, max_lon, max_lat = bbox
+    return (f"POLYGON(({min_lon} {min_lat},{max_lon} {min_lat},{max_lon} {max_lat},"
+            f"{min_lon} {max_lat},{min_lon} {min_lat}))")
+
 
 GBIF_OCC = "https://api.gbif.org/v1/occurrence/search"
 OBIS_OCC = "https://api.obis.org/v3/occurrence"
@@ -129,12 +140,29 @@ def main() -> None:
 
     params = json.loads(Path(params_path).read_text())
     extent = params.get("input_extent") or params["bbox"]
-    pad = buffer_km / 111.0
     min_lon, min_lat, max_lon, max_lat = extent
-    # context window: input extent + buffer (a REGION, not the tiny run bbox)
-    ctx = [min_lon - pad, min_lat - pad, max_lon + pad, max_lat + pad]
-    wkt = (f"POLYGON(({ctx[0]} {ctx[1]},{ctx[2]} {ctx[1]},{ctx[2]} {ctx[3]},"
-           f"{ctx[0]} {ctx[3]},{ctx[0]} {ctx[1]}))")
+    # v2.5.2: single-site extent -> GEODESIC CIRCLE window (matches the verdict
+    # threshold exactly); degenerate = single (lat, site) point. Multi-site extents
+    # keep the box window with a cos(lat)-corrected longitude pad.
+    if min_lon == max_lon and min_lat == max_lat:
+        site_lon, site_lat = min_lon, min_lat
+        # GBIF/OBIS server-side geometry=WKT degenerates on large polygons (GBIF
+        # circle query returned 3 of a true ~1100 for Abudefduf vaigiensis at R=2000),
+        # so fetch the cos(lat)-corrected BOX and let the client haversine filter
+        # decide in-ring vs beyond-ring; the window mode name documents that chain.
+        ctx = corrected_box(site_lon, site_lat, buffer_km)
+        wkt = _box_wkt(ctx)
+        window_mode = "geodesic-client (corrected-box fetch + haversine filter)"
+    else:
+        site_lon, site_lat = (min_lon + max_lon) / 2.0, (min_lat + max_lat) / 2.0
+        lat_pad = buffer_km / 111.0
+        lon_pad = buffer_km / (111.0 * max(0.05, __import__("math").cos(
+            __import__("math").radians((min_lat + max_lat) / 2.0))))
+        ctx = [min_lon - lon_pad, min_lat - lat_pad, max_lon + lon_pad, max_lat + lat_pad]
+        wkt = _box_wkt(ctx)
+        window_mode = "corrected-box (multi-site extent)"
+    print(f"context-records: window = {window_mode} "
+          f"(buffer {buffer_km:g} km; in-ring rows pass a haversine double-check)")
 
     if candidates_mode:
         cand_binoms = {}
@@ -173,9 +201,19 @@ def main() -> None:
     for name in names:
         gb = records_gbif(net, name, wkt, cap)
         ob = records_obis(net, name, wkt, cap) if call_obis else []
-        # interleave and cap per species across sources
         merged = gb[:cap] + ob[:max(0, cap - len(gb))]
-        n_per[name] = {"gbif": len(gb), "obis": len(ob), "kept": min(len(gb) + len(ob), cap)}
+        # v2.5.2 geodesic double-check (circle mode): drop any server-returned row
+        # haversine-farther than the ring (geo_shape predicates are approximate)
+        if window_mode == "geodesic-circle":
+            before = len(merged)
+            merged = [r for r in merged
+                      if haversine_km(site_lon, site_lat, r["decimalLongitude"],
+                                      r["decimalLatitude"]) <= buffer_km]
+            drop_note = before - len(merged)
+        else:
+            drop_note = 0
+        n_per[name] = {"gbif": len(gb), "obis": len(ob), "kept": len(merged),
+                       "haversine_dropped": drop_note}
         out_rows.extend(merged)
 
         # v2.5.1 merged-ring semantics: bounded GLOBAL sample beyond the context window,
@@ -185,10 +223,16 @@ def main() -> None:
             gbw = records_gbif_global(net, name, outside_cap)
             obw = records_obis_global(net, name, outside_cap) if call_obis else []
             # keep only rows outside the in-window bbox (those are already covered above)
-            outs = [r for r in gbw + obw
-                    if r["decimalLatitude"] is not None and r["decimalLongitude"] is not None
-                    and not (ctx[0] <= r["decimalLongitude"] <= ctx[2]
-                             and ctx[1] <= r["decimalLatitude"] <= ctx[3])][:outside_cap]
+            if window_mode == "geodesic-circle":
+                outs = [r for r in gbw + obw
+                        if r["decimalLatitude"] is not None and r["decimalLongitude"] is not None
+                        and haversine_km(site_lon, site_lat, r["decimalLongitude"],
+                                         r["decimalLatitude"]) > buffer_km][:outside_cap]
+            else:
+                outs = [r for r in gbw + obw
+                        if r["decimalLatitude"] is not None and r["decimalLongitude"] is not None
+                        and not (ctx[0] <= r["decimalLongitude"] <= ctx[2]
+                                 and ctx[1] <= r["decimalLatitude"] <= ctx[3])][:outside_cap]
             n_out[name] = len(outs)
             out_rows.extend(outs)
 
@@ -200,7 +244,8 @@ def main() -> None:
 
     total = sum(v["kept"] for v in n_per.values())
     out_total = sum(n_out.values()) if outside_cap > 0 else 0
-    print(f"context-records: {len(names)} species, buffer {buffer_km:.0f} km -> "
+    drops = sum(v.get("haversine_dropped", 0) for v in n_per.values())
+    print(f"context-records [{window_mode}]" + (f" haversine-dropped {drops}" if drops else "") + f": {len(names)} species, buffer {buffer_km:.0f} km -> "
           f"{total} backdrop records ({sum(v['gbif'] for v in n_per.values())} gbif, "
           f"{sum(v['obis'] for v in n_per.values()) if call_obis else '-'} obis) "
           f"+ {out_total} beyond-window sample records (outside_cap={outside_cap}) -> {out_csv}")

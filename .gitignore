@@ -24,3 +24,8 @@ preflight.md
 preflight_evidence.txt
 battle-test-report*.md
 debug-report*.md
+
+# Agent-local codebase index (opencode-codebase-index) + battle-test work dirs
+# (session output, regenerated each run; reports are git-ignored above)
+.codebase-index/
+battle-test-*/

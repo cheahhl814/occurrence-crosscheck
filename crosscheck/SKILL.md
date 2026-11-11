@@ -78,7 +78,7 @@ three skills)
 > so an unattended run cannot silently inherit the tight default — see preflight/SKILL.md.
 
 > **SP-11 — Concordance ring R (`--near-km`, default 100 in viz).** Evidence: merged-ring semantics
-> (SKILL.md v2.5.1 notes) make R both the map ring and the verdict threshold; the 2024K1 battle test
+> (SKILL.md v2.5.2 notes, geodesic since 2026-11-11) make R both the map ring and the verdict threshold; the 2024K1 battle test
 > used 150. Recommend: 150 for regional marine surveys. Confirm or pick one of: A) 50 (high-res
 > coastal) B) 150 (regional marine) C) custom.
 > Auto-pick condition: never silently auto-pick; if the user already endorsed a project-level R,
@@ -146,7 +146,28 @@ See `bin/skill-update-check.py`.
 §Deviations), `params.json`, `skill-built.md`, `battle-test-report.md` (structural smoke tests +
 realm-matrix battle test with real network-call evidence).
 
-## v2.5.1 — merged-ring occurrence semantics (PLAN §11.13)
+## v2.5.2 — geodesic ring semantics (2026-11-11): true-distance threshold, replaces the box
+
+The merged-ring parameter is unchanged (ONE `--near-km R` governs map ring = concordance
+threshold = context window), but the ring GEOMETRY changed from an axis-aligned bbox to a
+**geodesic circle** (user decision 2026-11-11, Ryan 12S battle test: box-corner points were
+counted "in-ring" up to ~sqrt(2)·R km from the site, and the km→deg conversion had no
+cos(lat) correction).
+
+- occurrence_lookup.py: ring counts are now server-side filtered with
+  `geometry=<64-point great-circle POLYGON>` on both GBIF and OBIS (both accept `geometry=`
+  WKT; geo_shape predicates ≈ exact for n=64 — <0.1 % radius error). World counts unchanged.
+  Antimeridian-crossing circles fall back to a cos(lat)-corrected bounding box and warn on
+  stderr (GBIF/OBIS validate coordinates to ±180°).
+- context_records.py: single-site extents fetch the same circle polygon (plus a client-side
+  haversine double-check on returned rows) and the beyond-ring global sample is now rows
+  farther than R **geodesically** (was: outside the box). Multi-site extents keep the box
+  window with a cos(lat)-corrected longitude pad. New shared helpers in `crosscheck/lib/geo.py`
+  (`ring_coords`, `circle_wkt`, `haversine_km`, `corrected_box`).
+- verdict deltas in practice are small at low latitudes (Ryan 12S battle test: see the
+  battle-test report's re-run section); they grow with |latitude| and ring size.
+
+## v2.5.1 — merged-ring occurrence semantics (PLAN §11.13) (superseded by v2.5.2 geometry)
 
 ONE ring parameter governs the occurrence analysis (map ring = concordance threshold = --near-km R,
 default 150 km). The old separate fetch-buffer is now an internal data-collection region only.
