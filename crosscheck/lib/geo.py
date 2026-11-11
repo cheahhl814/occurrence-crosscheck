@@ -24,7 +24,7 @@ EARTH_R_KM = 6371.0
 
 def ring_coords(lon0: float, lat0: float, ring_km: float, n: int = 64) -> list[tuple[float, float]]:
     """Points on a great circle of radius ring_km around (lat0, lon0); closes the ring."""
-    d = math.radians(ring_km / EARTH_R_KM)
+    d = ring_km / EARTH_R_KM  # central angle, ALREADY radians (km / km) — do not math.radians() this
     lat0r, lon0r = math.radians(lat0), math.radians(lon0)
     pts = []
     for k in range(n):

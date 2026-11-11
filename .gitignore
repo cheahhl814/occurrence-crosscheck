@@ -25,6 +25,9 @@ preflight_evidence.txt
 battle-test-report*.md
 debug-report*.md
 
+# Session handoff notes (agent-local, never part of the skill artifact)
+handoff*.md
+
 # Agent-local codebase index (opencode-codebase-index) + battle-test work dirs
 # (session output, regenerated each run; reports are git-ignored above)
 .codebase-index/
