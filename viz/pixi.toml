@@ -27,6 +27,12 @@ r-dplyr = "*"
 r-tidyr = "*"
 r-readr = "*"
 r-jsonlite = "*"
+# v1.8.0: map renderer swap — R leaflet is now the ONLY map renderer (interactive
+# single-file HTML; PNG snapshot via webshot2/chromote). Replaces plot_map.R /
+# plot_per_species.R (rnaturalearth ggplot2 static maps).
+r-leaflet = "*"
+r-htmlwidgets = "*"
+r-webshot2 = "*"
 # v1.4.0: species-image embedding (contact sheet + per-species map thumbnails)
 r-jpeg = "*"
 # v1.7.0: HTML report generator (Jinja2 template + vendored plotly.min.js in vendor/)
@@ -39,10 +45,9 @@ jinja2 = "*"
 viz = "Rscript bin/viz_run.R"
 # Individual phases (mirrors the sub-skills):
 preflight = "Rscript bin/viz_run.R --phase preflight"
-maps = "Rscript bin/plot_map.R"
+maps = "Rscript bin/plot_map_leaflet.R"
 profiles = "Rscript bin/plot_profiles.R"
 report = "Rscript bin/build_report.R"
-speciesmaps = "Rscript bin/plot_per_species.R"
 contactsheet = "Rscript bin/plot_contact_sheet.R"
 # Battle-test fixture generation:
 test-fixture = "Rscript test/make_test_fixture.R"
@@ -51,4 +56,3 @@ report-html = "python3 bin/build_report_html.py"
 # Self-check: compares this skill's git SHA to upstream (github.com/cheahhl814/occurrence-viz).
 # See bin/skill-update-check.py for the verdict legend (UP-TO-DATE / LOCAL-AHEAD / BEHIND-BY-N / OFFLINE / NO-ORIGIN).
 update-check = "python3 bin/skill-update-check.py"
-species-maps = "Rscript bin/plot_per_species.R"

@@ -1,10 +1,10 @@
 #!/usr/bin/env Rscript
-# viz_run.R — orchestrator driver for the occurrence-viz skill.
+# viz_run.R — orchestrator driver for the occurrence-viz skill (v1.8.0).
 #
 # Runs the full figure set for one input table against one realm run config,
-# invoking the standalone phase workers (bin/plot_map.R, bin/plot_profiles.R,
-# bin/build_report.R). Also exposes the maps/ sub-skill's run-preflight
-# validation as `--phase preflight`.
+# invoking the standalone phase workers (bin/plot_map_leaflet.R,
+# bin/plot_profiles.R, bin/build_report.R). Also exposes the maps/ sub-skill's
+# run-preflight validation as `--phase preflight`.
 #
 # Usage:
 #   Rscript bin/viz_run.R --input <file.parquet|csv> --config <run-config.json> \
@@ -23,27 +23,19 @@ option_list <- list(
   make_option("--outdir", type = "character", default = "viz_out", help = "Output directory"),
   make_option("--input-label", type = "character", default = NULL, help = "Dataset label for captions"),
   make_option("--overlay", type = "character", default = NULL,
-              help = "Context occurrences CSV (passed to the maps worker)"),
-  make_option("--genus-candidates", type = "character", default = NULL,
-              help = "genus_candidates.csv -> quarantined candidate-panel maps (species_maps/genus_candidates/)"),
-  make_option("--candidate-images", type = "character", default = NULL,
-              help = "candidate_images.csv -> genus-candidate contact sheet (fig 08)"),
+              help = "Context occurrences CSV (passed to the leaflet maps worker as a gray layer)"),
   make_option("--habitat", type = "character", default = NULL,
-              help = "habitat_iucn.csv -> IUCN+habitat annotations on maps + sheets"),
-  make_option("--candidates-context", type = "character", default = NULL,
-              help = "candidates_context_occurrences.csv -> honest plausibility for candidate panels"),
-  make_option("--images", type = "character", default = NULL,
-              help = "species_images.csv manifest -> contact sheet (fig 07) + per-species map thumbnails"),
-  make_option("--per-species", action = "store_true", default = FALSE,
-              help = "maps phase also emits per-species concordance/discordance maps (plot_per_species.R)"),
+              help = "habitat_iucn.csv -> IUCN+habitat annotations (contact sheet legacy feature)"),
   make_option("--near-km", type = "numeric", default = 100,
-              help = "site-level corroboration threshold for the per-species verdicts"),
+              help = "Concordance ring R (km) — drawn on the leaflet map (SP-11 echo)"),
   make_option("--counts", type = "character", default = NULL,
-              help = "occurrence_counts.json (per-species verdict source)"),
+              help = "occurrence_counts.json (per-species ring/world counts, leaflet popups)"),
+  make_option("--context", type = "character", default = NULL,
+              help = "context_occurrences.csv (context_records.py output; one toggleable leaflet layer per species)"),
   make_option("--params", type = "character", default = NULL,
-              help = "crosscheck params.json (declared buffer zone; forwarded to per-species maps)"),
-  make_option("--buffer-km", type = "numeric", default = NULL,
-              help = "buffer radius for per-species maps (default: params buffer km)"),
+              help = "crosscheck params.json (ring centre = input_extent site)"),
+  make_option("--images", type = "character", default = NULL,
+              help = "species_images.csv manifest -> contact sheet (fig 07, legacy feature)"),
   make_option("--only", type = "character", default = "maps,profiles,report",
               help = "Comma-separated subset of phases to run"),
   make_option("--phase", type = "character", default = NULL,
@@ -105,52 +97,29 @@ run_phase <- function(phase, script, args_extra = character(0)) {
 # workers validate the input themselves; --input is passed through. For maps
 # and profiles the input flag is required:
 if ("preflight" %in% phases) phases <- setdiff(phases, "preflight")
-if (isTRUE(opt[["per-species"]]) && !"speciesmaps" %in% phases) phases <- c(phases, "speciesmaps")
 if (!is.null(opt$images) && !"contactsheet" %in% phases) {
   phases <- setdiff(phases, "report")
   phases <- c(phases, "contactsheet", "report")  # contact sheet feeds the captions manifest
 }
-if (!is.null(opt[["genus-candidates"]]) && !"genuscandidates" %in% phases) {
-  phases <- setdiff(phases, "report")
-  phases <- c(phases, "genuscandidates", "report")  # quarantined: species_maps/genus_candidates/ only
-}
-if (!is.null(opt[["candidate-images"]]) && !"contactsheet" %in% phases)
-  stop("--candidate-images requires --images (drives the contactsheet phase)", call. = FALSE)
 if (length(phases) == 0) {
   log_msg("preflight-only run complete (no figures requested).")
   quit(status = 0)
 }
 ok <- TRUE
 for (ph in phases) {
-  script <- switch(ph, maps = "plot_map.R", speciesmaps = "plot_per_species.R", contactsheet = "plot_contact_sheet.R",
-                   genuscandidates = "plot_genus_candidates.R",
+  script <- switch(ph, maps = "plot_map_leaflet.R", contactsheet = "plot_contact_sheet.R",
                    profiles = "plot_profiles.R", report = "build_report.R",
-                   stop(sprintf("unknown phase '%s' (maps | speciesmaps | profiles | report)", ph), call. = FALSE))
-    extra <- if (ph == "maps" && !is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)
-  if (ph == "speciesmaps") {
-    if (is.null(opt$params)) stop("--per-species requires --params (crosscheck params.json)", call. = FALSE)
-    extra <- c("--params", opt$params, "--near-km", format(opt[["near-km"]], digits = 6),
-               "--buffer-km", format(if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else 2000, digits = 8),
-               "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
-    if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
-    if (!is.null(opt$counts)) extra <- c(extra, "--counts", opt$counts)
-    if (!is.null(opt$images)) extra <- c(extra, "--images", opt$images)
-    if (!is.null(opt$habitat)) extra <- c(extra, "--habitat", opt$habitat)
-  }
-  if (ph == "genuscandidates") {
-    extra <- c("--candidates", opt[["genus-candidates"]],
-               "--near-km", format(opt[["near-km"]], digits = 6),
-               "--buffer-km", format(if (!is.null(opt[["buffer-km"]])) opt[["buffer-km"]] else 2000, digits = 8),
-               "--label", if (!is.null(opt$`input-label`)) opt$`input-label` else "eDNA detections")
-    if (!is.null(opt$overlay)) extra <- c(extra, "--overlay", opt$overlay)
-    if (!is.null(opt[["candidates-context"]])) extra <- c(extra, "--candidates-context", opt[["candidates-context"]])
-    if (!is.null(opt$habitat)) extra <- c(extra, "--habitat", opt$habitat)
-    if (!is.null(opt$params)) extra <- c(extra, "--params", opt$params)
+                   stop(sprintf("unknown phase '%s' (maps | profiles | report)", ph), call. = FALSE))
+  extra <- if (!is.null(opt$overlay)) c("--overlay", opt$overlay) else character(0)
+  if (ph == "maps") {
+    extra <- c(if (!is.null(opt$context)) c("--context", opt$context) else character(0),
+               if (!is.null(opt$params)) c("--params", opt$params) else character(0),
+               if (!is.null(opt$counts)) c("--counts", opt$counts) else character(0))
+    if (!is.null(opt[["near-km"]])) extra <- c(extra, "--near-km", format(opt[["near-km"]], digits = 6))
   }
   if (ph == "contactsheet") {
     extra <- c("--images", opt$images,
                "--input-label", if (!is.null(opt$`input-label`)) opt$`input-label` else "species reference images",
-               if (!is.null(opt[["candidate-images"]])) c("--candidate-images", opt[["candidate-images"]]) else character(0),
                if (!is.null(opt$habitat)) c("--habitat", opt$habitat) else character(0))
   }
   ok <- run_phase(ph, script, extra) && ok

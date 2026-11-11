@@ -1,8 +1,8 @@
 ---
 name: occurrence-viz
-description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware publication-quality visualization of DwC-shaped occurrence tables — species occurrence maps (rnaturalearth + geocurate fallback pattern with fixed-seed point subsampling), realm-routed environmental profiles (marine → depth profiles; freshwater/terrestrial → elevation/bioclim profiles via the SAME plotting code with the x-axis variable from run config), per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Renderer PINNED to R (ggplot2 + sf + rnaturalearth; arrow for parquet). Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
-version: 1.0.3
-updated: "2026-09-03"
+description: "PHASE 2 of the marine-eDNA meta-skill stack (PLAN-marine-edna-meta-skill.md §5): standalone, realm-aware visualization of DwC-shaped occurrence tables — ONE interactive species occurrence map (R leaflet, self-contained single-file HTML; v1.9.0 replaces the retired rnaturalearth/ggplot2 static maps), realm-routed environmental profiles, per-species env envelopes, and optional trait-space plots, closed by a multi-panel report + auto-generated figure captions manifest. Input contract §11.6: standalone — minimal DwC columns (scientificName, decimalLatitude, decimalLongitude, eventDate) required; env/trait columns optional and gracefully absent. Works on plain obis-gbif-fetch parquet, not just edna-crosscheck output. Visualizes observations, never flags — flagging lives in edna-crosscheck. Use when the user asks to 'plot occurrence data', 'map gbif/obis records', 'make depth/elevation profiles for eDNA species', 'env envelope plot', or 'publication figures from enriched.parquet'."
+version: 1.9.0
+updated: "2026-11-11"
 triggers:
   - "occurrence visualization"
   - "species occurrence map"
@@ -83,7 +83,7 @@ Any parquet/CSV/TSV meeting the minimal contract works: **plain `obis-gbif-fetch
 | # | Phase | Goal | Sub-skill | Outputs |
 |---|---|---|---|---|
 | 1 | Preflight | Validate input + config; run summary; figure-set feasibility | `preflight/input-preflight/SKILL.md` | preflight summary + `work/figure_status.jsonl` |
-| 2 | Maps | Occurrence map + per-species small multiples | `maps/occurrence-maps/SKILL.md` | `fig/01_*`, `fig/02_*` |
+| 2 | Maps | ONE interactive occurrence map (R leaflet) | `maps/occurrence-maps/SKILL.md` | `fig/01_occurrence_map.html` (self-contained single file) + `fig/01_occurrence_map.png` (best-effort snapshot) |
 | 3 | Profiles | Realm-routed profile + envelopes + (optional) trait space | `profiles-env/env-profiles/SKILL.md` | `fig/03_*`, `fig/04_*`, `fig/05_*` (skips logged) |
 | 4 | Report | Multi-panel overview + captions manifest + run report | `report/figure-report/SKILL.md` | `fig/06_*`, `fig/figure-captions.md`, `figure-report.md` |
 
@@ -103,12 +103,12 @@ Single phases:
 
 ```bash
 pixi run preflight ...   # no figures
-pixi run maps ...        # Rscript bin/plot_map.R ...
+pixi run maps ...        # Rscript bin/plot_map_leaflet.R ...
 pixi run profiles ...    # Rscript bin/plot_profiles.R ...
 pixi run report ...      # Rscript bin/build_report.R ...
 ```
 
-Each phase appends to the append-only ledger `work/figure_status.jsonl` and saves its ggplot snapshot to `work/plots/*.rds`. If the ledger is missing when `report/` runs, the sub-skill refuses and points you back to phase 2/3.
+Each phase appends to the append-only ledger `work/figure_status.jsonl` (the leaflet map worker no longer saves a ggplot snapshot; profile figures still save `work/plots/*.rds` for the fig 06 patchwork). If the ledger is missing when `report/` runs, the sub-skill refuses and points you back to phase 2/3.
 
 ## Realm matrix (SCOPE-banner compliance)
 
@@ -124,20 +124,23 @@ Mixed-realm projects run as separate runs per realm (dataset-level rule).
 
 ## Output contract
 
-- PNG at **300 dpi** + vector **PDF** per figure (pinned baseline). SVG optional in `output_formats` (needs `svglite`).
+- **Map (fig 01, v1.9.0):** interactive **single-file HTML** (self-contained leaflet, JS inlined) is the pinned map deliverable; a PNG snapshot is written via webshot2 + Chrome when a browser binary exists (ledger records the skip otherwise). No PDF for the map — a leaflet widget has no vector-PDF export.
+- **Other figures:** PNG at **300 dpi** + vector **PDF** per figure (unchanged).
+- The retired per-species facet figure (`02_species_maps`) and per-species static map files (`fig/per_species/`) are no longer produced — species detail lives in leaflet popups and layer toggles.
 - `fig/figure-captions.md`: numbered, editable captions + per-figure file lists + records represented.
 - `figure-report.md`: run header (input, realm, config) + rendered/skipped ledger.
 - `work/` is scratch (git-ignored); `fig/` + `figure-report.md` are the bundle.
 
 ## Design invariants (do not break)
 
-1. **One renderer**: R only (pinned). No Python renderer, no second plotting stack.
+1. **One renderer**: R only (pinned). No Python renderer, no second plotting stack. Map = R leaflet; profile/envelope figures = R ggplot2.
 2. **One plotting code path for all realms** — realm differences live in the config JSON.
-3. **Graceful absence**: env/trait figures skip with a machine-readable reason; maps always render from the minimal contract.
+3. **Graceful absence**: env/trait figures skip with a machine-readable reason; the leaflet map renders from the minimal contract. The PNG map snapshot additionally skips when no Chrome binary is present — the HTML is always produced.
 4. **Reproducible subsampling**: geocurate pattern — `set.seed(42)`, cap `map.max_points`, record counts in captions.
-5. **Basemap fallback chain**: rnaturalearth (media, rnaturalearthdata) → `maps::map("world")` → bare frame; never hard-fail on a missing basemap dataset.
+5. **Offline basemap**: Natural Earth 1:50m land polygons embedded in the leaflet widget; the map must render on first open in any browser with **zero network access**. Remote tile providers are forbidden (OSM policy-blocks `file://` tile requests — user-observed 2026-11-11; CARTO key-walls headless Chrome).
 6. **Flags live upstream**: viz plots; it never computes or drops anything based on values.
 7. **Sibling decoupling**: consumes §11.6-shaped files only; never imports edna-crosscheck / occurrence-publish code.
+8. **SP-11 ring echo**: the map's ring comes only from the crosscheck run's R (`--near-km`); drawing a different radius must fail loudly, not silently drift.
 
 ## docs-corpus
 
@@ -166,42 +169,57 @@ pixi run viz --input test/test_fixture_terrestrial.parquet --config config/run-c
 - Built with [bioinfo-skill-creator](https://github.com/cheahhl814/bioinfo-skill-creator) (v1.1.0), PLAN-marine-edna-meta-skill.md Phase 2 spec.
 - Point-subsampling + basemap fallback pattern reused from the workspace `AMPLICON/bin/geocurate_inventory.R` experience (pinned).
 - Sibling skills: `edna-crosscheck` (Phase 1, file contract §11.2) and `occurrence-publish` (Phase 3) — file-contract only, no code coupling.
-## v1.4.0 — citable species images (`--images`)
+## v1.9.0 (2026-11-11) — map renderer swap: R leaflet replaces ALL ggplot2 maps
 
-`pixi run -e default -- Rscript bin/viz_run.R --input F.parquet --config config/<realm>.json --outdir OUT --per-species --near-km 150 --buffer-km 2000 --params <params.json> --counts <occurrence_counts.json> --images <work_dir>/species_images.csv`
+Motivated by the Ryan-12S battle test (2026-11-11, executor + Claude Code inspection): the static
+maps never drew the concordance ring, used a non-discriminable 57-hue legend, overlapped
+title/legend, and collapsed 60 coincident points into one dot.
 
-Two additions consume the crosscheck `species_images.csv` manifest (PLAN §11.9):
+- **Retired + deleted:** `bin/plot_map.R`, `bin/plot_per_species.R`,
+  `bin/plot_genus_candidates.R` (rnaturalearth/ggplot2 static maps).
+- **New:** `bin/plot_map_leaflet.R` — one interactive R-leaflet map
+  (`maps/occurrence-maps/SKILL.md` v2.0.0): concordance ring (SP-11 echo), verdict layer
+  toggles, per-species ring-vs-world counts in popups, optional context overlay, keyless OSM
+  basemap, self-contained single-file HTML + best-effort PNG snapshot (webshot2 + Chrome).
+- **pixi deps:** + r-leaflet, r-htmlwidgets, r-webshot2.
+- **v1.9.1 basemap hardening:** remote tiles removed entirely after OSM policy-blocked the
+  user's browser on the battle-test HTML — the basemap is now embedded Natural Earth 1:50m
+  land polygons with a CSS ocean colour (3.8 MB self-contained HTML, verified zero external
+  requests).
+- **fig06 multispecies overview:** needs ≥2 ggplot panels; with the map gone it typically
+  skips (profiles alone) — the interactive map replaces its overview role.
+- **build_report_html.py `--species-maps` / `--candidate-panels`:** the upstream R producers
+  are gone; those cross-check image columns are retired. Not rewritten (legacy genus-narrow
+  feature); the report still renders from its own context CSVs.
+- **Contact sheet (fig 07, `--images`) kept** — it is an image grid, not a map. The v1.4.0
+  per-species map thumbnails and the v1.5.0 ggplot candidate-panel maps are retired with the
+  deleted renderers.
+
+## v1.4.0 — citable species images (`--images`) — contact sheet retained; map thumbnails retired in v1.9.0
+
+`pixi run -e default -- Rscript bin/viz_run.R --input F.parquet --config config/<realm>.json --outdir OUT --params <params.json> --counts <occurrence_counts.json> --images <work_dir>/species_images.csv`
+
+One addition consumes the crosscheck `species_images.csv` manifest (PLAN §11.9):
 
 - **fig 07_species_contact_sheet** (`bin/plot_contact_sheet.R`): one tile per species — cached
   photo + credit + SPDX license, colour-coded by flag; flagged/no-image taxa render as explicit
   placeholder tiles (flags never silently drop). Caption entry auto-appended by build_report.
-- **per-species map thumbnails** (`plot_per_species.R --images`): photo inset top-right + credit
-  line in the figure caption ("Photo: <creator> (<license>) via <source>").
+- ~~per-species map thumbnails~~ — retired with the ggplot2 map removal (v1.9.0).
 
 Licence policy: cc-best (CC0/CC-BY(-SA)) preferred; by-nc allowed for internal reports;
 all-rights-reserved and unlicensed images are excluded from embeds in the fetcher upstream.
 Standalone workers: `pixi run -e default -- Rscript bin/plot_contact_sheet.R --images <csv> --outdir <out>`.
 
-## v1.5.0 — genus-candidate panels + fig 08 (quarantined candidate layer)
+## v1.5.0 — ~~genus-candidate panels~~ RETIRED in v1.9.0; candidate contact sheet (fig 08) kept
 
-For genus-only ASV groups (crosscheck genus-narrow), viz can render PREDICTED
-species panels — quarantined by design: they never enter the species verdict
-layer (no CONCORDANT/DISCORDANT words, no ledger verdict counts, separate
-`species_maps/genus_candidates/` directory).
+The ggplot2 candidate-panel maps (`bin/plot_genus_candidates.R`, the `genuscandidates`
+phase and `--genus-candidates` / `--candidates-context` flags) are **deleted** with the v1.8.0
+renderer swap. Genus-narrow candidates still flow through crosscheck's `genus_narrow.py` and
+can be surfaced as imagery only via the quarantined contact sheet:
 
-- `pixi run -e default -- Rscript bin/viz_run.R ... --genus-candidates <genus_candidates.csv> --candidates-context <candidates_context_occurrences.csv>`
-  runs the `genuscandidates` phase (`bin/plot_genus_candidates.R`): per candidate
-  (top-N, default 3 per genus) a panel map with a HOLLOW detection diamond and a
-  plausibility label **SUPPORTED** (nearest record <= --near-km) / **WEAK**
-  (in-region but distant) / **NO_RECORD** (zero records — absence of evidence).
-  Requires `--candidates-context` (fetched upstream by
-  `context_records.py --candidates <genus_candidates.csv>`): without the
-  candidates' OWN context records every candidate would falsely read NO_RECORD
-  (the detected-taxa context file only covers detected species).
-- `--candidate-images <candidate_images.csv>` renders fig
-  **08_genus_candidates_sheet** (bin/plot_contact_sheet.R): photos labelled
-  "candidate of <genus>, rank n" — hypotheses for the review queue, NOT species
-  identifications.
+- `--candidate-images <candidate_images.csv>` renders fig **08_genus_candidates_sheet**
+  (bin/plot_contact_sheet.R): photos labelled "candidate of <genus>, rank n" — hypotheses for
+  the review queue, NOT species identifications.
 
 ## v1.6.0 — habitat + IUCN annotations (`--habitat`)
 

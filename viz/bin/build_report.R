@@ -116,20 +116,19 @@ for (i in seq_len(nrow(rendered))) {
   ex <- extras[[as.character(r$idx)]]
   exg <- function(k) { v <- ex[[k]]; ifelse(is.null(v), NA, v) }
   fig_key <- as.character(r$figure)
-  cap <- if (grepl("^per_species_", fig_key)) {
+  if (fig_key == "preflight") next  # run-preflight is a ledger entry, not a figure
+  cap <- if (fig_key == "01_occurrence_map_png") {
+    sprintf("**Figure %d.** Static webshot2/Chrome snapshot of the interactive leaflet map (fig 01) — verdict-coloured detections on the OSM basemap; the interactive HTML carries the ring toggle and per-species popups.", fig_num)
+  } else if (grepl("^per_species_", fig_key)) {
     sprintf("**Figure %d.** Occurrence map for *%s* (%s records) — one-file-per-species output.",
             fig_num, ifelse(is.na(exg("species")), fig_key, exg("species")),
             ifelse(is.na(exg("points")), "?", fmt_num(exg("points"))))
-  } else switch(fig_key,
-    "01_occurrence_map" = sprintf("**Figure %d.** Occurrence records for %s (%s points shown%s; %s distinct species). Basemap: rnaturalearth (medium, 1:50m) or maps::map() fallback, per the geocurate pattern.",
+  } else switch(fig_key, "01_occurrence_map" = sprintf("**Figure %d.** Interactive occurrence map for %s (%s points%s; %s distinct species). R leaflet single-file HTML (self-contained), with the R=%s km concordance ring, verdict layer toggles (CONCORDANT / OUT_OF_RANGE / AMBIGUOUS) and per-species GBIF/OBIS ring-vs-world counts in the popups. Static snapshot: `01_occurrence_map.png` (webshot2/Chrome).",
                                   fig_num, label,
                                   ifelse(is.na(exg("points")), "?", fmt_num(exg("points"))),
                                   ifelse(isTRUE(as.logical(exg("subsampled"))), sprintf(" — random subsample of %s records", exg("n_original")), ""),
-                                  ifelse(is.na(exg("n_species")), "?", exg("n_species"))),
-    "02_species_maps"   = sprintf("**Figure %d.** Per-species occurrence maps for the top-record-count species (small multiples; %s species shown, %s points). One-file-per-species versions are under `fig/per_species/`.",
-                                  fig_num,
                                   ifelse(is.na(exg("n_species")), "?", exg("n_species")),
-                                  ifelse(is.na(exg("points")), "?", fmt_num(exg("points")))),
+                                  ifelse(is.na(exg("ring_km")), "?", fmt_num(exg("ring_km")))),
     "03_env_profile"    = sprintf("**Figure %d.** Occurrence distribution along `%s` (x-axis: %s). Realm-routed profile: marine \u2192 depth, freshwater/terrestrial \u2192 elevation/bioclim — identical plotting code, variable chosen by run config.",
                                   fig_num, exg("x_column"),
                                   if (is.null(cfg$profiles)) "value" else if (is.null(cfg$profiles$x_label)) "value" else cfg$profiles$x_label),
