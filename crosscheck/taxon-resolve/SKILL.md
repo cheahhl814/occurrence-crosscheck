@@ -6,6 +6,7 @@ updated: "2026-08-31"
 triggers:
   - "edna-crosscheck taxon resolve"
   - "resolve scientificName crosswalk"
+disable-model-invocation: true
 ---
 
 # taxon-resolve/edna-crosscheck-taxon-resolve

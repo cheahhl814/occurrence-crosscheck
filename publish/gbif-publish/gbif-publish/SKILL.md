@@ -8,6 +8,7 @@ triggers:
   - "build gbif dwca"
   - "occurrence core archive"
   - "ipt upload command"
+disable-model-invocation: true
 ---
 
 # Sub-skill: gbif-publish

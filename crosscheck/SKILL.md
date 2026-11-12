@@ -13,6 +13,7 @@ triggers:
 requires:
   - "pixi (this skill's pixi.toml/pixi.lock pins python 3.11 + R 4.5 envs)"
   - "network access (read-only GETs to GBIF, OBIS, WoRMS, FishBase-via-rfishbase's S3 bucket, Bio-ORACLE ERDDAP, WorldClim)"
+disable-model-invocation: true
 ---
 
 # Meta-skill: edna-crosscheck

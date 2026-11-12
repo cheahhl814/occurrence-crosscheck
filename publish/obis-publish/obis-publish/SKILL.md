@@ -9,6 +9,7 @@ triggers:
   - "OBIS-ENV-DATA"
   - "worms lsid gate"
   - "eMoF builder"
+disable-model-invocation: true
 ---
 
 # Sub-skill: obis-publish

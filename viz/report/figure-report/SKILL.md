@@ -7,6 +7,7 @@ triggers:
   - "figure captions manifest"
   - "occurrence viz report"
   - "multipanel occurrence figure"
+disable-model-invocation: true
 ---
 
 # Skill: occviz-figure-report (occurrence-viz / report)

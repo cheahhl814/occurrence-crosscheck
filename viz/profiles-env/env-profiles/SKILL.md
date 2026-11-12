@@ -9,6 +9,7 @@ triggers:
   - "env envelope plot"
   - "trait space plot"
   - "bioclim profile"
+disable-model-invocation: true
 ---
 
 # Skill: occviz-env-profiles (occurrence-viz / profiles-env)

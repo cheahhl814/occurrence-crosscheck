@@ -6,6 +6,7 @@ updated: "2026-08-31"
 triggers:
   - "edna-crosscheck fishbase traits"
   - "pull fishbase depth trophic level"
+disable-model-invocation: true
 ---
 
 # fishbase-traits/edna-crosscheck-fishbase-traits

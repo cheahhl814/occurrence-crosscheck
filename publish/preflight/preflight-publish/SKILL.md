@@ -8,6 +8,7 @@ triggers:
   - "sign-off gate"
   - "validate publish inputs"
   - "flagged occurrences sign-off"
+disable-model-invocation: true
 ---
 
 # Sub-skill: preflight-publish

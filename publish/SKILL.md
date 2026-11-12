@@ -13,6 +13,7 @@ triggers:
   - "DNA derived data"
   - "sign off flagged occurrences"
   - "occurrence-publish"
+disable-model-invocation: true
 ---
 
 # Skill: occurrence-publish

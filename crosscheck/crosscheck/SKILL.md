@@ -6,6 +6,7 @@ updated: "2026-08-31"
 triggers:
   - "edna-crosscheck crosscheck flags"
   - "emit crosscheck report"
+disable-model-invocation: true
 ---
 
 # crosscheck/edna-crosscheck-crosscheck

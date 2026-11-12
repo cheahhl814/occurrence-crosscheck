@@ -6,6 +6,7 @@ updated: "2026-08-31"
 triggers:
   - "edna-crosscheck realm router"
   - "route realm marine freshwater terrestrial"
+disable-model-invocation: true
 ---
 
 # realm-router/edna-crosscheck-realm-router

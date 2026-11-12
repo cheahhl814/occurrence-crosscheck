@@ -6,6 +6,7 @@ updated: "2026-08-31"
 triggers:
   - "edna-crosscheck preflight"
   - "validate ASV table for crosscheck"
+disable-model-invocation: true
 ---
 
 # preflight/edna-crosscheck-preflight

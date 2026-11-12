@@ -16,6 +16,7 @@ requires:
   - "pixi (pixi install from this skill's pixi.toml — R 4.3+ via conda-forge)"
   - "R packages: ggplot2, sf, rnaturalearth(+data), maps, arrow, scico, viridis, patchwork, scales, optparse, dplyr, tidyr, readr, jsonlite"
   - "no network access — fully local, no API calls, no tile servers"
+disable-model-invocation: true
 ---
 
 # Skill: occurrence-viz

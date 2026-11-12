@@ -8,6 +8,7 @@ triggers:
   - "gbif data validator"
   - "obis structural checks"
   - "pre-publish validation"
+disable-model-invocation: true
 ---
 
 # Sub-skill: validate-dwca

@@ -8,6 +8,7 @@ triggers:
   - "plot gbif obis records"
   - "species occurrence map"
   - "leaflet occurrence map"
+disable-model-invocation: true
 ---
 
 # Skill: occviz-occurrence-maps (occurrence-viz / maps)

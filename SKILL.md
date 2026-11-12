@@ -16,6 +16,7 @@ triggers:
 requires:
   - "pixi (nested per-sub-skill workspaces; see README)"
   - "network access (read-only GETs; publish legs dry-run by default)"
+disable-model-invocation: true
 ---
 
 # Meta-skill: occurrence-crosscheck

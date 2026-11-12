@@ -7,6 +7,7 @@ triggers:
   - "edna-crosscheck env extract"
   - "bio-oracle extract"
   - "worldclim bioclim extract"
+disable-model-invocation: true
 ---
 
 # env-extract/edna-crosscheck-env-extract

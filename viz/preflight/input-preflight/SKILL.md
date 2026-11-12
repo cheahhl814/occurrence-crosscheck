@@ -8,6 +8,7 @@ triggers:
   - "validate dwc table for plotting"
   - "occurrence viz run config"
   - "realm run config check"
+disable-model-invocation: true
 ---
 
 # Skill: occviz-input-preflight (occurrence-viz / preflight)
