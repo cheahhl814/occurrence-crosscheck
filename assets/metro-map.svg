@@ -1,0 +1,184 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 900" width="1600" height="900">
+<title>occurrence-crosscheck skill map</title>
+<rect width="1600" height="900" fill="#fff"/>
+<g font-family="Helvetica, Arial, 'Liberation Sans', sans-serif">
+<text x="30" y="46" font-size="34" font-weight="bold" fill="#0f1b2d" text-anchor="start" >occurrence-crosscheck — skill map</text>
+<text x="32" y="74" font-size="18" font-weight="normal" fill="#6b7280" text-anchor="start" >eDNA detections → validated records → GBIF / OBIS</text>
+<rect x="24" y="150" width="916" height="625" rx="30" fill="#f3f4f6" stroke="#d9dce1" stroke-width="2"/>
+<circle cx="46" cy="118" r="19" fill="#0f1b2d"/>
+<text x="46" y="125" font-size="21" font-weight="bold" fill="#fff" text-anchor="middle" >1</text>
+<text x="76" y="127" font-size="29" font-weight="bold" fill="#0f1b2d" text-anchor="start" >Validate</text>
+<text x="212.0" y="126" font-size="17" font-weight="normal" fill="#6b7280" text-anchor="start" >crosscheck/ · queries GBIF (all realms) · OBIS (marine)</text>
+<rect x="952" y="150" width="280" height="625" rx="30" fill="#f3f4f6" stroke="#d9dce1" stroke-width="2"/>
+<circle cx="974" cy="118" r="19" fill="#0f1b2d"/>
+<text x="974" y="125" font-size="21" font-weight="bold" fill="#fff" text-anchor="middle" >2</text>
+<text x="1004" y="127" font-size="29" font-weight="bold" fill="#0f1b2d" text-anchor="start" >Visualize</text>
+<text x="1155.5" y="126" font-size="17" font-weight="normal" fill="#6b7280" text-anchor="start" >viz/</text>
+<rect x="1244" y="150" width="340" height="625" rx="30" fill="#f3f4f6" stroke="#d9dce1" stroke-width="2"/>
+<circle cx="1266" cy="118" r="19" fill="#0f1b2d"/>
+<text x="1266" y="125" font-size="21" font-weight="bold" fill="#fff" text-anchor="middle" >3</text>
+<text x="1296" y="127" font-size="29" font-weight="bold" fill="#0f1b2d" text-anchor="start" >Publish</text>
+<text x="1416.5" y="126" font-size="17" font-weight="normal" fill="#6b7280" text-anchor="start" >publish/</text>
+<path d="M 354 372 C 354 290 390 236 465 236 H 1030 C 1065 236 1070 290 1070 372" fill="none" stroke="#9aa1ac" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 11"/>
+<circle cx="620" cy="236" r="11" fill="#fff" stroke="#9aa1ac" stroke-width="3.5" stroke-dasharray="4 4"/>
+<text x="620" y="212" font-size="15" font-weight="bold" fill="#6b7280" text-anchor="middle" >habitat-iucn</text>
+<text x="620" y="266" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >optional</text>
+<circle cx="790" cy="236" r="11" fill="#fff" stroke="#9aa1ac" stroke-width="3.5" stroke-dasharray="4 4"/>
+<text x="790" y="212" font-size="15" font-weight="bold" fill="#6b7280" text-anchor="middle" >species-images</text>
+<text x="790" y="266" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >optional</text>
+<path d="M51 280 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M46 275 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M74 275 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="44.0" y="292" width="44" height="24" rx="6" fill="#0f1b2d"/>
+<text x="66" y="309" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >ASV</text>
+<text x="66" y="352" font-size="13" font-weight="normal" fill="#6b7280" text-anchor="middle" >ASV table</text>
+<text x="66" y="367" font-size="13" font-weight="normal" fill="#6b7280" text-anchor="middle" >(nf-edna)</text>
+<path d="M 92 300 H 128 C 175 300 165 394 214 394" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="40.0" y="466" width="70" height="24" rx="6" fill="#0f1b2d"/>
+<text x="75" y="483" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" >realm</text>
+<text x="42" y="524" font-size="13" font-weight="normal" fill="#6b7280" text-anchor="start" >marine | freshwater | terrestrial</text>
+<path d="M 112 478 H 126 C 170 478 165 406 214 406" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 214 394 H 470 C 505 394 510 330 550 330 H 560 C 600 330 600 394 635 394 H 675" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 214 406 H 470 C 505 406 510 470 550 470 H 560 C 600 470 600 406 635 406 H 675" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="205" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<rect x="275" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<rect x="345" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<rect x="415" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="226" y="448" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="start" >preflight</text>
+<text x="284" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >realm-router</text>
+<text x="354" y="448" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >taxon-resolve</text>
+<text x="354" y="466" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >GBIF · WoRMS · FishBase</text>
+<text x="424" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >fishbase-traits</text>
+<circle cx="555" cy="330" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<circle cx="555" cy="470" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="555" y="286" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >env-extract</text>
+<text x="555" y="306" font-size="12.5" font-weight="normal" fill="#6b7280" text-anchor="middle" >marine → Bio-ORACLE</text>
+<text x="555" y="506" font-size="12.5" font-weight="normal" fill="#6b7280" text-anchor="middle" >else → WorldClim / CHELSA</text>
+<rect x="666" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="675" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >crosscheck</text>
+<text x="675" y="448" font-size="14" font-weight="normal" fill="#6b7280" text-anchor="middle" >QC</text>
+<path d="M 675 394 H 790" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 675 406 H 690 C 720 406 715 640 748 640 H 1250" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 790 394 H 1015" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M775 380 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M770 375 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M798 375 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="751.0" y="392" width="78" height="24" rx="6" fill="#0f1b2d"/>
+<text x="790" y="409" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >PARQUET</text>
+<text x="790" y="446" font-size="13" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >enriched.parquet</text>
+<text x="790" y="462" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >→ viz · publish</text>
+<path d="M760 620 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M755 615 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M783 615 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="749.0" y="632" width="52" height="24" rx="6" fill="#0f1b2d"/>
+<text x="775" y="649" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >JSON</text>
+<text x="775" y="686" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >crosscheck_</text>
+<text x="775" y="701" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >report.json</text>
+<path d="M825 620 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M820 615 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M848 615 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="818.0" y="632" width="44" height="24" rx="6" fill="#0f1b2d"/>
+<text x="840" y="649" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >CSV</text>
+<text x="840" y="590" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >review_</text>
+<text x="840" y="605" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >queue.csv</text>
+<path d="M883 620 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M878 615 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M906 615 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="876.0" y="632" width="44" height="24" rx="6" fill="#0f1b2d"/>
+<text x="898" y="649" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >TSV</text>
+<text x="898" y="686" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >flagged_</text>
+<text x="898" y="701" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >occurrences.tsv</text>
+<text x="898" y="598" font-size="12" font-weight="bold" fill="#b57400" text-anchor="middle" >gate file</text>
+<path d="M970 495 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M965 490 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M993 490 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="963.0" y="507" width="44" height="24" rx="6" fill="#0f1b2d"/>
+<text x="985" y="524" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >DwC</text>
+<text x="985" y="560" font-size="13" font-weight="normal" fill="#6b7280" text-anchor="middle" >any DwC</text>
+<text x="985" y="575" font-size="13" font-weight="normal" fill="#6b7280" text-anchor="middle" >table</text>
+<path d="M 985 488 C 985 420 990 394 1022 394" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1022 394 H 1178" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1075 394 V 500" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1178 394 V 500" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<circle cx="1022" cy="394" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1022" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >viz preflight</text>
+<circle cx="1075" cy="394" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1063" y="440" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="end" >maps</text>
+<circle cx="1126" cy="394" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1126" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >profiles</text>
+<circle cx="1178" cy="394" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1166" y="440" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="end" >report</text>
+<path d="M1060 510 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M1055 505 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M1083 505 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="1049.0" y="522" width="52" height="24" rx="6" fill="#0f1b2d"/>
+<text x="1075" y="539" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >HTML</text>
+<text x="1075" y="576" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >fig/01_occurrence_</text>
+<text x="1075" y="591" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >map.html</text>
+<text x="1063" y="456" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="end" >leaflet</text>
+<path d="M1163 510 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M1158 505 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M1186 505 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="1160.0" y="522" width="36" height="24" rx="6" fill="#0f1b2d"/>
+<text x="1178" y="539" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >MD</text>
+<text x="1215" y="576" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="end" >figure-</text>
+<text x="1215" y="591" font-size="12.5" font-weight="bold" fill="#0f1b2d" text-anchor="end" >report.md</text>
+<text x="1130" y="306" font-size="14" font-weight="bold" fill="#119a8a" text-anchor="middle" >never flags</text>
+<text x="1130" y="323" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >observes only</text>
+<path d="M 1278 394 H 1375 C 1395 394 1395 330 1415 330 H 1420 C 1440 330 1440 394 1465 394 H 1520 C 1535 394 1550 380 1556 330" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1278 406 H 1375 C 1395 406 1395 470 1415 470 H 1420 C 1440 470 1440 406 1465 406 H 1490" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1520 394 C 1535 394 1550 440 1556 495" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<path d="M 1262 640 H 1268 C 1275 640 1278 630 1278 600 V 440" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<rect x="1271" y="356" width="14" height="88" rx="6" fill="#0f1b2d"/>
+<circle cx="1278" cy="400" r="19" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<circle cx="1278" cy="400" r="9" fill="#fff" stroke="#0f1b2d" stroke-width="3.5"/>
+<rect x="1239.0" y="328" width="78" height="24" rx="6" fill="#0f1b2d"/>
+<text x="1278" y="345" font-size="13" font-weight="bold" fill="#fff" text-anchor="middle" >SIGN-OFF</text>
+<text x="1150" y="622" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >+ enriched.parquet</text>
+<rect x="1326" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1335" y="438" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >publish</text>
+<text x="1335" y="455" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >preflight</text>
+<text x="1335" y="474" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >gate re-check</text>
+<circle cx="1417" cy="330" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<circle cx="1417" cy="470" r="11" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<rect x="1378.0" y="284" width="78" height="24" rx="6" fill="#fff" stroke="#119a8a" stroke-width="2"/>
+<text x="1417" y="301" font-size="12" font-weight="bold" fill="#119a8a" text-anchor="middle" >all realms</text>
+<text x="1417" y="270" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >gbif-publish</text>
+<text x="1417" y="508" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >obis-publish</text>
+<rect x="1374.0" y="518" width="86" height="24" rx="6" fill="#fff" stroke="#f2a31b" stroke-width="2"/>
+<text x="1417" y="535" font-size="12" font-weight="bold" fill="#b57400" text-anchor="middle" >marine only</text>
+<rect x="1481" y="377.0" width="18" height="46" rx="9" fill="#fff" stroke="#0f1b2d" stroke-width="4"/>
+<text x="1490" y="366" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="middle" >validate</text>
+<text x="1490" y="438" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >GBIF API</text>
+<text x="1490" y="451" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >+ offline</text>
+<text x="1490" y="464" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="middle" >fallback</text>
+<path d="M1541 290 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M1536 285 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M1564 285 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="1536.0" y="302" width="40" height="24" rx="6" fill="#0f1b2d"/>
+<text x="1556" y="319" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >ZIP</text>
+<text x="1576" y="232" font-size="15" font-weight="bold" fill="#0f1b2d" text-anchor="end" >DwC-A zips</text>
+<text x="1576" y="248" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="end" >GBIF occurrence-core</text>
+<text x="1576" y="261" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="end" >+ OBIS Event Core</text>
+<path d="M1541 500 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M1536 495 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M1564 495 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<rect x="1533.0" y="512" width="46" height="24" rx="6" fill="#0f1b2d"/>
+<text x="1556" y="529" font-size="12" font-weight="bold" fill="#fff" text-anchor="middle" >CMD</text>
+<text x="1576" y="566" font-size="14" font-weight="bold" fill="#0f1b2d" text-anchor="end" >publish commands</text>
+<text x="1576" y="582" font-size="12" font-weight="normal" fill="#6b7280" text-anchor="end" >no live publish</text>
+<path d="M 40 842 H 100" fill="none" stroke="#119a8a" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="112" y="847" font-size="16" font-weight="normal" fill="#0f1b2d" text-anchor="start" >pipeline path</text>
+<path d="M 330 842 H 390" fill="none" stroke="#f2a31b" stroke-width="9" stroke-linecap="round" stroke-linejoin="round"/>
+<text x="402" y="847" font-size="16" font-weight="normal" fill="#0f1b2d" text-anchor="start" >secondary line · realm fork / hand-off</text>
+<path d="M 790 842 H 850" fill="none" stroke="#9aa1ac" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="3 11"/>
+<text x="862" y="847" font-size="16" font-weight="normal" fill="#0f1b2d" text-anchor="start" >optional spur</text>
+<circle cx="1055" cy="842" r="14" fill="#fff" stroke="#0f1b2d" stroke-width="3.5"/><circle cx="1055" cy="842" r="6" fill="#fff" stroke="#0f1b2d" stroke-width="3"/>
+<text x="1082" y="847" font-size="16" font-weight="normal" fill="#0f1b2d" text-anchor="start" >human sign-off gate</text>
+<g transform="translate(1330 842) scale(0.6) translate(-1330 -842)">
+<path d="M1315 822 h28 l12 12 v33 h-40 z" fill="#c9ccd2"/>
+<path d="M1310 817 h28 l12 12 v38 h-40 z" fill="#fff" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+<path d="M1338 817 v12 h12" fill="none" stroke="#0f1b2d" stroke-width="3" stroke-linejoin="round"/>
+</g>
+<text x="1352" y="847" font-size="16" font-weight="normal" fill="#0f1b2d" text-anchor="start" >artifact (file)</text>
+</g></svg>

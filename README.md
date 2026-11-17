@@ -2,14 +2,14 @@
 
 [![Version](https://img.shields.io/badge/version-2.1.0-blue)](#-installation)
 [![Type](https://img.shields.io/badge/type-agent%20skill-blueviolet)](#-installation)
-[![Built with](https://img.shields.io/badge/built%20with-skill--forge-orange)](https://github.com/cheahhl814/bioinfo-skill-creator)
+[![Built with](https://img.shields.io/badge/built%20with-skill--forge-orange)](https://github.com/cheahhl814/skill-forge)
 
 Meta-skill for the eDNA occurrence pipeline: (1) cross-check eDNA ASV observations against GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim environmental envelopes (realm-aware: marine/freshwater/terrestrial); (2) publication-ready occurrence figures (maps, profiles, envelopes, trait space); (3) publish validated observations as DwC-A to GBIF/IPT and OBIS (Event Core + DNA-derived data). Router — routes to the three phase sub-skills: crosscheck/, viz/, publish/. Use when asked to 'cross-check eDNA results', 'plot species occurrence', or 'publish eDNA to GBIF/OBIS'.
 
 **Repository**: https://github.com/cheahhl814/occurrence-crosscheck
 
 > [!NOTE]
-> Current version: **v2.0.0** (updated 2026-08-31).
+> Current version: **v2.1.0** (updated 2026-11-11).
 
 ## Contents
 
@@ -87,13 +87,21 @@ pixi run test-smoke      # Router structural smoke tests (39 checks)
 
 ## 🔬 Pipeline overview
 
-The analysis follows a phased evidence chain. Each phase consumes the artifacts of the previous phase and gates progression with a Go/No-Go check.
+<img src="assets/metro-map.svg" alt="occurrence-crosscheck skill map — three phases as a transit map: Validate (crosscheck/), Visualize (viz/), Publish (publish/), with the flagged_occurrences.tsv sign-off gate between Validate and Publish" width="100%">
 
-| # | Phase | Goal | Sub-skill | Artifact produced |
-|:--|:------|:-----|:----------|:------------------|
-| **1** | **Crosscheck** | Phase 1 of the eDNA meta-skill stack (merged into `../../occurrence-crosscheck`) described in `../../../PLAN-marine-edna | `crosscheck/` | `$RUN_DIR/crosscheck-artifact.md` |
-| **2** | **Publish** | **v1.0.0.** Publish leg of the eDNA meta-skill stack (`PLAN-marine-edna-meta-skill.md` Phase 3). | `publish/` | `$RUN_DIR/publish-artifact.md` |
-| **3** | **Viz** | **v1.0.0.** Realm-aware, standalone publication-quality occurrence visualization. This file is a **router** — the sub-sk | `viz/` | `$RUN_DIR/viz-artifact.md` |
+*Metro-map view of the three-phase pipeline — source: [`assets/metro-map.svg`](assets/metro-map.svg) · raster preview: [`assets/metro-map.png`](assets/metro-map.png)*
+
+**What this does, in plain English.** You ran an eDNA experiment: water/soil samples were sequenced, and you got a list of species detected at your site(s). Before a journal or a database accepts that data, someone reasonably asks: *"How do you know these species really occur there, and are your records good enough to publish?"* Checking that by hand — looking up every species, checking known distributions and habitat limits, fixing taxonomy, making figures, formatting submission files — is weeks of tedious work. This skill automates exactly that.
+
+It works in three stages:
+
+1. **Validate** — your species list is cross-checked against the world's public occurrence databases (**GBIF** everywhere, **OBIS** for the ocean), plus trait and habitat databases (FishBase, WoRMS, climate envelopes). The question it answers: *"Is this species actually known from around here, and does the environment fit?"* It never deletes anything — it flags doubtful rows (e.g. "this fish is never recorded within 2,000 km of your site") and hands them to you for a decision.
+2. **Visualize** — the result becomes publication-ready figures: an interactive map showing where each species was recorded (your site vs. known occurrences), depth/elevation profiles, and a multi-page report. Think "the figures for the paper, generated for you."
+3. **Publish** — the *validated* data is packaged into the exact file formats GBIF and OBIS require (Darwin Core Archives, plus metadata describing how the DNA was collected and sequenced), and it prints the commands to upload them.
+
+The one rule that holds it all together: **nothing gets published without a human signing off.** Validation quarantines every doubtful record into a review file, and the publish stage *refuses to run* until a person has marked each flagged row approved or excluded. It's an assembly line with a mandatory human inspection station — the machine does the 90% grunt work, you make the 10% judgment calls.
+
+One honest caveat: it *checks and packages*; it does not prove a detection is real (that's the lab work), and anything it flags might still be a genuine rare sighting — which is exactly why a human makes the final call.
 
 > [!TIP]
 > Read each sub-skill's `SKILL.md` for the full procedure, its ask-user stop points, and its signature library (stderr pattern → cause → fix).
@@ -116,7 +124,7 @@ Tool usage is grounded in the offline `docs-corpus/` snapshots (version-matched 
 
 ## 🔄 Update check
 
-Every skill built with [skill-forge](https://github.com/cheahhl814/bioinfo-skill-creator) ships a self-update check that compares the deployed git SHA against this upstream repo via `git fetch` — no GitHub API call, no extra dependencies.
+Every skill built with [skill-forge](https://github.com/cheahhl814/skill-forge) ships a self-update check that compares the deployed git SHA against this upstream repo via `git fetch` — no GitHub API call, no extra dependencies.
 
 ```bash
 pixi run update-check
@@ -131,6 +139,8 @@ pixi run update-check
 | `NO-ORIGIN` | 2 | No `origin` remote configured; informational only |
 
 ## 📁 Repository layout
+
+> **Nested sub-skills (lint note):** `crosscheck/`, `viz/` and `publish/` each carry their own `pixi.toml` but intentionally live inside this one git repo. The `skill-forge` structural linter reports C6 ("pixi.toml present but no `.git`") for each of them — that is an accepted exception for this monorepo, not a defect; do not `git init` the sub-directories. The 13 leaf sub-skills (e.g. `crosscheck/preflight/`, `viz/maps/occurrence-maps/`) carry no READMEs by design — they are not standalone skills.
 
 ```text
 occurrence-crosscheck/
@@ -172,7 +182,7 @@ This skill does not currently ship a Nextflow runner. For cohort/HPC execution, 
 
 ## Provenance
 
-Built with the [skill-forge](https://github.com/cheahhl814/bioinfo-skill-creator) meta-skill (v1.1.0), following the AiX-BIO skill convention (preflight → build → debug → battle-test evidence chain). Pattern adopted from:
+Built with the [skill-forge](https://github.com/cheahhl814/skill-forge) meta-skill (v1.x), following the AiX-BIO skill convention (preflight → build → debug → battle-test evidence chain). Pattern adopted from:
 
 - **BettaMt-agents** — https://github.com/cheahhl814/BettaMt-agents
 - **bacterial-genome-analysis** — https://github.com/cheahhl814/bacterial-genome-analysis
