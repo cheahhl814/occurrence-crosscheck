@@ -1,8 +1,8 @@
 ---
 name: occurrence-publish
-description: 'Phase 3 of the marine-eDNA meta-skill stack: publish validated eDNA occurrences to GBIF and (marine-only) OBIS. Consumes enriched.parquet + flagged_occurrences.tsv (with explicit human sign-off) + run manifest from edna-crosscheck, enforces three hard gates (pending-record sign-off block, OBIS marine-realm gate, WoRMS LSID requirement), builds Darwin Core Archives with a plain-Python writer (stdlib zip + hand-built meta.xml + EML 2.0; no eDNAbridge dependency), produces GBIF occurrence-core archives and OBIS Event-Core archives (survey/cruise → station → sample → sequencing event + occurrence + DNA-derived data + eMoF/OBIS-ENV-DATA), and validates via the GBIF Data Validator API (with documented offline structural fallback) plus local OBIS structural checks. No live IPT/OBIS publishing in v1 — emits ready-to-run publish commands. Sub-skills: preflight (input + signoff gate), gbif-publish, obis-publish, validate. Triggers: "publish eDNA to GBIF/OBIS", "DwC-A publish", "publish occurrence data", "OBIS Event Core", "DNA derived data", "sign off flagged occurrences".'
+description: 'Phase 3 of the marine-eDNA stack: publish validated eDNA occurrences to GBIF and (marine-only) OBIS as Darwin Core Archives behind three pinned gates. Consumes enriched.parquet + flagged_occurrences.tsv (human sign-off required) + the run manifest from edna-crosscheck. Plain-Python DwC-A writer (stdlib zip + hand-built meta.xml + EML 2.0): GBIF occurrence-core with optional DNA-derived data extension; OBIS Event-Core (survey/station/sample/sequencing event) with eMoF/OBIS-ENV-DATA. Refuses pending sign-off, non-marine OBIS realms, and records lacking a WoRMS LSID. Validates via the GBIF Data Validator API with an offline structural fallback; no live IPT/OBIS publishing — emits ready-to-run publish commands. Sub-skills: preflight, gbif-publish, obis-publish, validate. Triggers: "publish eDNA to GBIF/OBIS", "DwC-A publish", "publish occurrence data", "OBIS Event Core", "DNA derived data", "sign off flagged occurrences".'
 version: 1.0.1
-updated: "2026-09-01"
+updated: "2026-11-11"
 triggers:
   - "publish eDNA occurrences"
   - "publish to GBIF"
@@ -18,7 +18,7 @@ disable-model-invocation: true
 
 # Skill: occurrence-publish
 
-> **v1.0.0.** Publish leg of the eDNA meta-skill stack (`PLAN-marine-edna-meta-skill.md` Phase 3).
+> Publish leg of the eDNA meta-skill stack (`PLAN-marine-edna-meta-skill.md` Phase 3).
 > Takes the crosscheck output (`enriched.parquet` + `flagged_occurrences.tsv` + run manifest),
 > enforces the three pinned HARD GATES, builds GBIF- and OBIS-shaped Darwin Core Archives with a
 > **plain-Python DwC-A writer** (stdlib `zipfile` + hand-built `meta.xml` + EML 2.0 XML — no

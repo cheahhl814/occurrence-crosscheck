@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Structural smoke test for edna-crosscheck, per bioinfo-skill-creator's
+"""Structural smoke test for edna-crosscheck, per skill-forge's
 battle-test §4 checklist (frontmatter coherence, contract wiring, signature
 library completeness, docs-corpus freshness, pixi parse, git hygiene,
 self-update check). No network calls, no pixi env required beyond stdlib +

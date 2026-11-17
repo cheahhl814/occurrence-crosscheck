@@ -2,7 +2,7 @@
 name: occurrence-crosscheck
 description: "Meta-skill for the eDNA occurrence pipeline: (1) cross-check eDNA ASV observations against GBIF/OBIS/WoRMS/FishBase + Bio-ORACLE/WorldClim environmental envelopes (realm-aware: marine/freshwater/terrestrial); (2) publication-ready occurrence figures (maps, profiles, envelopes, trait space); (3) publish validated observations as DwC-A to GBIF/IPT and OBIS (Event Core + DNA-derived data). Router — routes to the three phase sub-skills: crosscheck/, viz/, publish/. Use when asked to 'cross-check eDNA results', 'plot species occurrence', or 'publish eDNA to GBIF/OBIS'."
 version: 2.1.0
-updated: "2026-10-05"
+updated: "2026-11-11"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -21,7 +21,7 @@ disable-model-invocation: true
 
 # Meta-skill: occurrence-crosscheck
 
-v2.0.0 — merged from three independently-built skills (see `archieved/MIGRATION-occurrence-crosscheck.md` in the workspace root; full pre-merge git histories preserved as verified git bundles).
+Merged from three independently-built skills (see `archieved/MIGRATION-occurrence-crosscheck.md` in the workspace root; full pre-merge git histories preserved as verified git bundles).
 
 Design source of truth: `../../../PLAN-marine-edna-meta-skill.md` — in particular the **realm scope banner** (marine vs freshwater vs terrestrial routing) and **§11 pinned cross-skill data contracts**, which are the filesystem boundary between the sub-skills.
 
@@ -86,7 +86,7 @@ Full histories: `../../../archieved/*.bundle` (verified complete; `git clone <bu
 - [ ] `python3 test_smoke.py` — top-level structural checks (router wiring, sub-skill frontmatter, contracts presence)
 - [ ] Per-sub-suite: `cd crosscheck && python3 test/test_smoke.py` (84 checks) · `cd viz && python3 test_smoke.py` (22) · `cd publish && python3 test_smoke.py` (22)
 - [ ] Realm matrix: `cd crosscheck && bash test/run_battle_test.sh`
-- [ ] Historical battle-test reports: `*/battle-test-report.md` (v1.0.0 verdicts: PASS / PASS-WITH-WARNINGS / PASS)
+- [ ] Historical battle-test reports: `crosscheck/battle-test-report.md` and `publish/battle-test-report.md` (v1.0.0-era verdicts: PASS / PASS-WITH-WARNINGS / PASS). No viz report is committed; the viz leg was reworked (leaflet maps) and needs a battle-test refresh.
 
 - `species-images` (crosscheck v2.3.0): citable per-species photos (iNat-first, GBIF fallback) as a flagged manifest — visualized by the viz sub-skill via `--images` (fig 07 contact sheet + map thumbnails). See PLAN §11.9.
 - `genus-candidates` (viz v1.5.0): predicted species for genus-only ASVs render as quarantined candidate panels (SUPPORTED/WEAK/NO_RECORD) + fig 08 candidate sheet — hypotheses only, never merged into the species verdict layer.

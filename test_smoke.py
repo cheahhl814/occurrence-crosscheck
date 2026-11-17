@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Top-level structural smoke tests for the occurrence-crosscheck meta-skill (v2.0.0).
 
-Mirrors the bioinfo-skill-creator battle-test style: router wiring, sub-skill
+Mirrors the skill-forge battle-test style: router wiring, sub-skill
 frontmatter coherence, contract presence, env isolation. 18 checks.
 """
 from __future__ import annotations

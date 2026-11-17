@@ -13,26 +13,11 @@ disable-model-invocation: true
 
 # Skill: occviz-occurrence-maps (occurrence-viz / maps)
 
-> **v2.0.4 (2026-11-11) — single custom panel (user feedback).** The leaflet layers control is
-> GONE: a 60-group control bled off the viewport and its verdict toggles duplicated the
-> per-species view. One custom panel (top-right, max-height 58 vh + scroll) now owns all
-> control: CONCORDANT / OUT_OF_RANGE / AMBIGUOUS checkboxes toggle the GBIF/OBIS context dots
-> **of the species carrying that verdict** (blue in-ring, gray beyond-ring), plus ring and
-> detections toggles and the per-species dropdown. The sampling pin is a **neutral dark**
-> color at all times (verdict is carried by the per-verdict species dots, not the pin).
-> Markers are drawn JS-side from data injected into the jsHook (canvas renderer); the hook
-> body must use `this` for the map and 3rd arg is null.
->
-> **v2.0.1 (2026-11-11) — basemap hardening.** Remote tile providers removed entirely after
-> OSM policy-blocked the reviewer's browser on the battle-test HTML. The basemap is now embedded
-> natural-earth land polygons; the widget makes zero network requests.
->
-> **v2.0.0 (2026-11-11) — renderer swap.** The ggplot2 static map renderer
-> (`plot_map.R`, `plot_per_species.R`, `plot_genus_candidates.R`) is **retired and
-> deleted**. One interactive R-leaflet map is now the single map deliverable.
-> The renderer swap was motivated by the Ryan-12S battle test (2026-11-11): the
-> static maps could not draw the concordance ring, used a non-discriminable
-> 57-hue legend, and collapsed every coincident point into one dot.
+Design notes (current state):
+
+- **Single custom panel.** The leaflet layers control is gone: one top-right panel (max-height 58 vh + scroll) owns all control — CONCORDANT / OUT_OF_RANGE / AMBIGUOUS checkboxes toggle the GBIF/OBIS context dots of the species carrying that verdict (blue in-ring, gray beyond-ring), plus ring and detections toggles and a per-species dropdown. The sampling pin is neutral dark at all times; verdict is carried by the per-verdict dots, not the pin. Markers are drawn JS-side from data injected into the jsHook (canvas renderer; the hook body must use `this` for the map and 3rd arg is null).
+- **Offline basemap.** Remote tile providers are removed entirely — the basemap is embedded Natural Earth land polygons; the widget makes zero network requests.
+- **Single map deliverable.** The ggplot2 static map renderers were retired; the one interactive R-leaflet map is the pinned output (`fig/01_occurrence_map.html` + best-effort PNG snapshot). The swap was motivated by the static maps' failure modes (no concordance ring, non-discriminable hues, coincident points collapsed).
 
 ## 0. Inputs / Outputs contract
 
@@ -84,7 +69,7 @@ disable-model-invocation: true
   different, reads, station, and (with `--counts`) `in-ring: n · world: m`.
 - **Basemap**: OFFLINE — Natural Earth 1:50m land polygons embedded in the widget and a CSS
   ocean colour. No remote tiles at all: OSM policy-blocks `file://` tile requests and CARTO
-  key-walls headless Chrome (both verified 2026-11-11).
+  key-walls headless Chrome (both verified live).
 - **Coincident points** (single-site battles): toggles + site popups expose all
   records; zooming replaces the retired per-species facet small multiples.
 
@@ -99,7 +84,7 @@ extent (recommended), (B) explicit `map.bbox` in config.
 Pinned: **offline embedded Natural Earth 1:50m land polygons** (rendered into the widget with
 `rnaturalearth::ne_countries(scale="medium")`; ocean is a CSS background colour). No remote tile
 provider is used at all: OSM policy-blocks tile requests from `file://` pages ("Access blocked —
-App is not following the tile usage policy" — user-observed 2026-11-11) and CARTO key-walls
+App is not following the tile usage policy" — user-observed) and CARTO key-walls
 headless Chrome. Options: (A) offline embedded (pinned), (B) future extension only: an explicitly
 toggled online-tiles group for networked review sessions.
 

@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Structural smoke tests for occurrence-publish (v1.0.0).
 
-22 checks mirroring the bioinfo-skill-creator battle-test conventions:
+22 checks mirroring the skill-forge battle-test conventions:
 
   1-2   master SKILL.md frontmatter + version coherence
   3-6   4 sub-skill SKILL.md files: frontmatter, version match, SP section, signature library ≥3

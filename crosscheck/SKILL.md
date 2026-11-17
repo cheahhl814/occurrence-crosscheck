@@ -2,7 +2,7 @@
 name: edna-crosscheck
 description: 'Cross-checks eDNA occurrence observations (from nf-edna/ednanopore ASV tables) against GBIF/OBIS/WoRMS/FishBase taxonomic backbones and Bio-ORACLE/WorldClim-CHELSA environmental envelopes, realm-aware (marine/freshwater/terrestrial). Phase 1 of a 3-skill eDNA meta-stack (PLAN-marine-edna-meta-skill.md). Emits enriched.parquet, crosscheck_report.json, flagged_occurrences.tsv, review_queue.csv — flags, never silently drops records. Use when the user asks to "cross-check eDNA results", "validate ASV table against GBIF/OBIS", "QC eDNA occurrences", or "ground-truth eDNA detections".'
 version: 1.1.0
-updated: "2026-10-05"
+updated: "2026-11-11"
 triggers:
   - "cross-check eDNA results"
   - "validate ASV table against GBIF"
@@ -69,7 +69,7 @@ three skills)
 ## 0.5 Ask-User Stop Points (runtime parameters)
 
 > **SP-10 — Buffer scale.** Evidence: single-site degenerate extent + auto 0.25-deg buffer produced
-> 39/48 false-DISCORDANT verdicts in the 2026-08-31 battle test (defect D1); `preflight.py` already
+> 39/48 false-DISCORDANT verdicts in the first battle test (defect D1); `preflight.py` already
 > WARNs on this combo but proceeds. Recommend: regional `--buffer-km` (100 km estuary/coastal,
 > 2000 km regional biogeographic). Auto-pick only when input extent spans multiple distinct sites.
 > Confirm or pick one of: A) `--buffer-km 100` B) `--buffer-km 2000` C) explicit `--bbox`.
@@ -79,7 +79,7 @@ three skills)
 > so an unattended run cannot silently inherit the tight default — see preflight/SKILL.md.
 
 > **SP-11 — Concordance ring R (`--near-km`, default 100 in viz).** Evidence: merged-ring semantics
-> (SKILL.md v2.5.2 notes, geodesic since 2026-11-11) make R both the map ring and the verdict threshold; the 2024K1 battle test
+> (see Operational notes) make R both the map ring and the verdict threshold; the 2024K1 battle test
 > used 150. Recommend: 150 for regional marine surveys. Confirm or pick one of: A) 50 (high-res
 > coastal) B) 150 (regional marine) C) custom.
 > Auto-pick condition: never silently auto-pick; if the user already endorsed a project-level R,
@@ -147,98 +147,32 @@ See `bin/skill-update-check.py`.
 §Deviations), `params.json`, `skill-built.md`, `battle-test-report.md` (structural smoke tests +
 realm-matrix battle test with real network-call evidence).
 
-## v2.5.2 — geodesic ring semantics (2026-11-11): true-distance threshold, replaces the box
+## Operational notes
 
-The merged-ring parameter is unchanged (ONE `--near-km R` governs map ring = concordance
-threshold = context window), but the ring GEOMETRY changed from an axis-aligned bbox to a
-**geodesic circle** (user decision 2026-11-11, Ryan 12S battle test: box-corner points were
-counted "in-ring" up to ~sqrt(2)·R km from the site, and the km→deg conversion had no
-cos(lat) correction).
+Design decisions that constrain maintenance (see git history for how they landed):
 
-- occurrence_lookup.py: ring counts are now server-side filtered with
-  `geometry=<64-point great-circle POLYGON>` on both GBIF and OBIS (both accept `geometry=`
-  WKT; geo_shape predicates ≈ exact for n=64 — <0.1 % radius error). World counts unchanged.
-  Antimeridian-crossing circles fall back to a cos(lat)-corrected bounding box and warn on
-  stderr (GBIF/OBIS validate coordinates to ±180°).
-- context_records.py: single-site extents fetch the same circle polygon (plus a client-side
-  haversine double-check on returned rows) and the beyond-ring global sample is now rows
-  farther than R **geodesically** (was: outside the box). Multi-site extents keep the box
-  window with a cos(lat)-corrected longitude pad. New shared helpers in `crosscheck/lib/geo.py`
-  (`ring_coords`, `circle_wkt`, `haversine_km`, `corrected_box`).
-- verdict deltas in practice are small at low latitudes (Ryan 12S battle test: see the
-  battle-test report's re-run section); they grow with |latitude| and ring size.
-
-## v2.5.1 — merged-ring occurrence semantics (PLAN §11.13) (superseded by v2.5.2 geometry)
-
-ONE ring parameter governs the occurrence analysis (map ring = concordance threshold = --near-km R,
-default 150 km). The old separate fetch-buffer is now an internal data-collection region only.
-- occurrence_lookup.py: optional 5th arg `ring_km` -> primary gbif/obis counts within the RING bbox
-  (input_extent ± R); always adds `gbif_world`/`obis_world` (global count queries). Beyond-ring = world − ring.
-- context_records.py: new `--outside-cap N` -> bounded global sample beyond the context window per species,
-  so maps show where species occur outside the ring. Verdicts: CONCORDANT (record ≤ R) / DISCORDANT (none
-  ≤ R but known beyond — visible on the map) / NO_RECORD (absent from GBIF/OBIS everywhere we looked).
-- Env/WorldClim sampling regions are UNCHANGED (buffer stays an internal env-envelope setting).
-
-## v2.5.2 — habitat-iucn candidate parsing fix (H1, found in battle-test rebuild)
-
-`read_candidates()` read a `scientificName` column that `genus_candidates.csv` does not carry
-(it has `candidate_species` with author citation) — so `--candidates` appended ZERO rows to
-`habitat_iucn.csv`, silently. Reader now parses `candidate_species` (binomial = first two
-tokens, mirroring species_images.load_candidates), accepts `scientificName` for compat, and
-maps `genus`/`rank` with `candidate_of`/`candidate_rank` fallbacks. Battle-test rebuild went
-48 → 101 manifest taxa after the fix.
-
-## v2.5.3 — runtime ask-user stop points SP-10..SP-13 (§0.5)
-
-Added a "0.5 Ask-User Stop Points (runtime parameters)" section documenting the four runtime
-(as opposed to design-time) confirmation points an agent must resolve on each run: buffer scale
-(SP-10, now backstopped by `preflight.py --require-confirm`), concordance ring R (SP-11), detection-
-site coordinate provenance (SP-12), and realm routing for mixed-taxa inputs (SP-13). Each carries an
-explicit auto-pick condition so unattended runs know exactly when they may proceed without asking.
-
-## v1.0.2 — basisOfRecord filter (exclude museum/fossil/captive records)
-
-Museum PreservedSpecimen / FossilSpecimen / LivingSpecimen (aquarium/zoo) records were being
-pulled into occurrence backdrops, ranges, and corroboration counts unfiltered — their coordinates
-often reflect a collecting institution, an old type-locality, or a captive source rather than an
-actual in-situ detection, which is exactly the kind of thing that should never silently count
-toward a CONCORDANT/DISCORDANT verdict.
-
-- `lib/netlog.py` gains `gbif_basis_of_record_qs()` and `obis_basis_of_record_ok()`: a shared
-  allow-list (HUMAN_OBSERVATION, MACHINE_OBSERVATION, MATERIAL_SAMPLE, OBSERVATION — MATERIAL_SAMPLE
-  kept because that's the basisOfRecord this project's own eDNA data is published under, see
-  `publish/`) used by all three GBIF/OBIS callers: `context_records.py`, `range_lookup.py`,
-  `occurrence_lookup.py`.
-- GBIF: applied server-side via repeated `basisOfRecord=` query params — verified live to actually
-  narrow GBIF's `count` (e.g. *Chiloscyllium punctatum*: 1467 unfiltered → 819 observation-basis-only).
-- OBIS: GBIF-style server-side filtering does NOT work — OBIS's `/v3/occurrence` endpoint silently
-  ignores any `basisOfRecord` query param in every casing/format tried (live-verified 2026-09-03: an
-  intentionally bogus value returned the identical total as no filter at all). Where full OBIS records
-  are fetched (`context_records.py`), the filter is applied client-side against each record's
-  `basisOfRecord` field instead. OBIS's count-only calls (`size=0`/`size=1`, total field, in
-  `occurrence_lookup.py`/`range_lookup.py`) initially stayed basisOfRecord-unfiltered for this
-  reason — since fixed properly, see v1.0.3 below.
-
-## v1.0.3 — post-retrieval basisOfRecord filter for OBIS's count-only calls
-
-Closes the gap v1.0.2 left open: `occurrence_lookup.py`'s and `range_lookup.py`'s `obis_count()`
-now ARE basisOfRecord-filtered, mirroring the fix already applied to
-`workflows/obis-gbif-fetch/scripts/fetch_obis.py`/`fetch_unified.py` (fetch full records, filter
-client-side, since OBIS ignores the query param server-side).
-
-- `lib/netlog.py` gains `obis_filtered_count(net, base_url)`: a cheap `size=0` call gets the raw
-  (unfiltered) total first; only if that's `> 0` does it fetch one page of up to
-  `OBIS_COUNT_FILTER_CAP` (10000) full records and count how many pass `obis_basis_of_record_ok()`.
-  Species with zero raw records (common — most NO_RECORD/DISCORDANT verdicts) still cost only the
-  one cheap request, same as before.
-- `ponytail:` this is exact for any species whose raw total is ≤ 10000 (OBIS live-verified to
-  return a full page that size in one request) and an undercount above it — there's no
-  basisOfRecord-aware pagination to fall back on. Upgrade path: offset-paginate past the cap if a
-  report shows a suspiciously round near-cap count for a very common species.
-- Live-verified against *Chiloscyllium punctatum* (world count, no bbox): raw total 1130 → filtered
-  695 (`obis_count()`'s result matched an independent manual count of the same records byte-for-byte).
-- Both `occurrence_lookup.py`'s and `range_lookup.py`'s `obis_count()` are now one-line wrappers
-  around `obis_filtered_count()`.
+- **Ring geometry is geodesic.** The concordance ring (`--near-km R`) is a true great-circle
+  circle: occurrence counts use a server-side `geometry=<64-point POLYGON>` filter on both GBIF
+  and OBIS (antimeridian circles fall back to a cos(lat)-corrected bbox with a stderr warning);
+  `context_records.py` double-checks rows with a client-side haversine filter. Shared helpers
+  live in `lib/geo.py` (`ring_coords`, `circle_wkt`, `haversine_km`, `corrected_box`). Multi-site
+  extents keep the box window with a cos(lat)-corrected longitude pad.
+- **Merged-ring semantics (PLAN §11.13).** ONE `--near-km R` governs the map ring, the concordance
+  threshold, and the verdict (CONCORDANT = record ≤ R; DISCORDANT = known beyond R; NO_RECORD =
+  absent everywhere checked). The old separate fetch buffer is now only an internal
+  data-collection region; `context_records.py --outside-cap N` bounds the beyond-ring sample.
+  Env/WorldClim sampling regions are unchanged (buffer stays an internal env-envelope setting).
+- **basisOfRecord filtering.** GBIF applies the allow-list server-side (repeated
+  `basisOfRecord=` params: HUMAN_OBSERVATION, MACHINE_OBSERVATION, MATERIAL_SAMPLE, OBSERVATION —
+  MATERIAL_SAMPLE kept because it is this project's own eDNA basis). OBIS silently ignores the
+  parameter server-side (live-verified), so full-record fetches filter client-side, and the
+  count-only calls go through `lib/netlog.py::obis_filtered_count` (cheap `size=0` raw count,
+  then one page up to `OBIS_COUNT_FILTER_CAP` = 10000, exact up to the cap).
+- **habitat-iucn candidate parsing.** `read_candidates()` parses `candidate_species`
+  (binomial = first two tokens), accepts `scientificName` for compat, and maps `genus`/`rank`
+  with `candidate_of`/`candidate_rank` fallbacks (matches `species_images.load_candidates`).
+- **Runtime stop points.** SP-10..SP-13 (§0.5 above) are the runtime ask-user points; keep them
+  in sync with `preflight.py --require-confirm`.
 
 ## Dependencies → biodb-fetch (shared data lake)
 

@@ -2,7 +2,7 @@
 """Structural smoke tests for the occurrence-viz skill (v1.0.0).
 
 Verifies the skill is structurally sound and ready to ship — mirrors the
-bioinfo-skill-creator battle-test sub-skill checks:
+skill-forge battle-test sub-skill checks:
 
 - Master + 4 sub-skill SKILL.md have valid YAML frontmatter (name, description,
   version, updated, triggers); versions coherent across all 5.
